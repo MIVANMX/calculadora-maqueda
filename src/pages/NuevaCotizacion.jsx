@@ -139,7 +139,26 @@ const NuevaCotizacion = () => {
                 </div>
                 <div className="sm:col-span-2">
                   <label className={labelClass}>Link Google Maps</label>
-                  <input name="link_maps" value={form.link_maps} onChange={handleChange} className={inputClass} placeholder="https://maps.app.goo.gl/..." />
+                  <p className="text-xs text-gray-400 mb-1">Copia el link desde la barra del navegador en Google Maps (no uses el botón compartir)</p>
+                  <input name="link_maps" value={form.link_maps} onChange={handleChange} className={inputClass} placeholder="https://www.google.com/maps/place/..." />
+                  {form.link_maps && form.link_maps.includes('google.com/maps') && (() => {
+                    const match = form.link_maps.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)
+                    if (!match) return <p className="text-xs text-amber-500 mt-1">No se pudieron extraer las coordenadas, verifica el link.</p>
+                    const lat = match[1]
+                    const lng = match[2]
+                    return (
+                      <div className="mt-2 rounded-lg overflow-hidden border border-gray-200">
+                        <iframe
+                          width="100%"
+                          height="200"
+                          style={{border: 0}}
+                          loading="lazy"
+                          allowFullScreen
+                          src={`https://maps.google.com/maps?q=${lat},${lng}&z=17&output=embed`}
+                        />
+                      </div>
+                    )
+                  })()}
                 </div>
                 <div>
                   <label className={labelClass}>Tipo de inmueble</label>
