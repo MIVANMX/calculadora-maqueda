@@ -9,10 +9,12 @@ const Admin = () => {
   const [usuarios, setUsuarios] = useState([])
   const [loading, setLoading] = useState(true)
   const [vista, setVista] = useState('cotizaciones')
+  const [busqueda, setBusqueda] = useState('')
+  const [pagina, setPagina] = useState(1)
+  const POR_PAGINA = 10
 
-  useEffect(() => {
-    fetchData()
-  }, [])
+  useEffect(() => { fetchData() }, [])
+  useEffect(() => { setPagina(1) }, [busqueda, vista])
 
   const fetchData = async () => {
     setLoading(true)
@@ -25,24 +27,69 @@ const Admin = () => {
     setLoading(false)
   }
 
-  const eliminarCotizacion = async (id) => {
+  const eliminarCotizacion = async (id, e) => {
+    e.stopPropagation()
     if (!confirm('¿Eliminar esta cotización?')) return
     const { error } = await supabase.from('quotations').delete().eq('id', id)
     if (!error) setCotizaciones(cotizaciones.filter(c => c.id !== id))
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      <div className="max-w-6xl mx-auto px-6 py-8">
+  const viables = cotizaciones.filter(c => c.viable).length
+  const noViables = cotizaciones.filter(c => !c.viable).length
 
-        <div className="mb-6">
-          <h1 className="text-xl font-bold text-gray-900">Panel Admin</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Gestión global del sistema</p>
+  const cotizacionesFiltradas = cotizaciones.filter(c =>
+    busqueda === '' ? true :
+      (c.nombre_propietario || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+      (c.direccion || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+      (c.profiles?.nombre || '').toLowerCase().includes(busqueda.toLowerCase())
+  )
+
+  const totalPaginas = Math.ceil(cotizacionesFiltradas.length / POR_PAGINA)
+  const paginadas = cotizacionesFiltradas.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA)
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      <Navbar />
+
+      {/* Hero */}
+      <div style={{ background: '#0D1B2A', padding: '40px 0' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 32px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ fontSize: '12px', color: '#6b87a8', margin: '0 0 8px', letterSpacing: '0.8px', textTransform: 'uppercase', fontWeight: '500' }}>Administración</p>
+              <h1 style={{ fontSize: '26px', fontWeight: '700', color: '#ffffff', margin: '0 0 6px', letterSpacing: '-0.5px' }}>Panel Admin</h1>
+              <p style={{ fontSize: '14px', color: '#6b87a8', margin: 0 }}>Gestión global del sistema</p>
+            </div>
+            <div style={{ display: 'flex', gap: '1px', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 24px', textAlign: 'center' }}>
+                <p style={{ fontSize: '22px', fontWeight: '700', color: '#ffffff', margin: '0 0 2px' }}>{cotizaciones.length}</p>
+                <p style={{ fontSize: '11px', color: '#6b87a8', margin: 0 }}>Cotizaciones</p>
+              </div>
+              <div style={{ width: '1px', background: 'rgba(255,255,255,0.08)' }} />
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 24px', textAlign: 'center' }}>
+                <p style={{ fontSize: '22px', fontWeight: '700', color: '#4ade80', margin: '0 0 2px' }}>{viables}</p>
+                <p style={{ fontSize: '11px', color: '#6b87a8', margin: 0 }}>Viables</p>
+              </div>
+              <div style={{ width: '1px', background: 'rgba(255,255,255,0.08)' }} />
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 24px', textAlign: 'center' }}>
+                <p style={{ fontSize: '22px', fontWeight: '700', color: '#f87171', margin: '0 0 2px' }}>{noViables}</p>
+                <p style={{ fontSize: '11px', color: '#6b87a8', margin: 0 }}>No viables</p>
+              </div>
+              <div style={{ width: '1px', background: 'rgba(255,255,255,0.08)' }} />
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 24px', textAlign: 'center' }}>
+                <p style={{ fontSize: '22px', fontWeight: '700', color: '#60a5fa', margin: '0 0 2px' }}>{usuarios.length}</p>
+                <p style={{ fontSize: '11px', color: '#6b87a8', margin: 0 }}>Usuarios</p>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
+
+      {/* Contenido */}
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px' }}>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6">
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '24px' }}>
           {[
             { key: 'cotizaciones', label: `Cotizaciones (${cotizaciones.length})` },
             { key: 'usuarios', label: `Usuarios (${usuarios.length})` },
@@ -50,7 +97,13 @@ const Admin = () => {
             <button
               key={t.key}
               onClick={() => setVista(t.key)}
-              className={`px-4 py-1.5 rounded-xl text-sm font-medium transition-colors ${vista === t.key ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-blue-300'}`}
+              style={{
+                padding: '9px 20px', borderRadius: '8px', fontSize: '13px', fontWeight: '500', cursor: 'pointer',
+                border: vista === t.key ? '1px solid #1B3A6B' : '1px solid #e5e7eb',
+                background: vista === t.key ? '#1B3A6B' : '#ffffff',
+                color: vista === t.key ? '#ffffff' : '#6b7280',
+                transition: 'all 0.15s',
+              }}
             >
               {t.label}
             </button>
@@ -58,57 +111,135 @@ const Admin = () => {
         </div>
 
         {loading ? (
-          <div className="text-center py-20 text-gray-400">Cargando...</div>
+          <div style={{ textAlign: 'center', padding: '80px', color: '#9ca3af', fontSize: '14px' }}>Cargando...</div>
         ) : vista === 'cotizaciones' ? (
-          <div className="space-y-3">
-            {cotizaciones.map(c => (
-              <div key={c.id} className="bg-white border border-gray-200 rounded-2xl p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${c.viable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                        {c.viable ? 'Viable' : 'No viable'}
-                      </span>
-                      <span className="text-xs text-gray-400">{c.tipo_inmueble}</span>
-                      <span className="text-xs text-purple-600 font-medium">👤 {c.profiles?.nombre || c.profiles?.email}</span>
+          <>
+            {/* Búsqueda */}
+            <div style={{ position: 'relative', marginBottom: '20px' }}>
+              <svg style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                value={busqueda}
+                onChange={e => setBusqueda(e.target.value)}
+                placeholder="Buscar por propietario, dirección o vendedor..."
+                style={{ width: '100%', padding: '10px 14px 10px 40px', border: '1px solid #e5e7eb', borderRadius: '10px', fontSize: '13px', color: '#0D1B2A', background: '#ffffff', outline: 'none', boxSizing: 'border-box' }}
+                onFocus={e => e.target.style.borderColor = '#2E6BE6'}
+                onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+              />
+            </div>
+
+            {paginadas.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '80px', color: '#9ca3af', fontSize: '14px' }}>No hay cotizaciones</div>
+            ) : (
+              <>
+                <p style={{ fontSize: '12px', color: '#9ca3af', margin: '0 0 12px' }}>
+                  Mostrando {(pagina - 1) * POR_PAGINA + 1}–{Math.min(pagina * POR_PAGINA, cotizacionesFiltradas.length)} de {cotizacionesFiltradas.length} cotizaciones
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {paginadas.map(c => (
+                    <div key={c.id} style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '14px', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', transition: 'all 0.2s' }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = '#1B3A6B'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(13,27,42,0.08)' }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = 'none' }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px', background: c.viable ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', color: c.viable ? '#16a34a' : '#dc2626', border: c.viable ? '1px solid rgba(34,197,94,0.2)' : '1px solid rgba(239,68,68,0.2)' }}>
+                            {c.viable ? 'Viable' : 'No viable'}
+                          </span>
+                          <span style={{ fontSize: '11px', color: '#9ca3af', background: '#f3f4f6', padding: '3px 10px', borderRadius: '20px' }}>{c.tipo_inmueble}</span>
+                          <span style={{ fontSize: '11px', color: '#1B3A6B', background: '#f0f4ff', padding: '3px 10px', borderRadius: '20px', fontWeight: '500' }}>
+                            👤 {c.profiles?.nombre || c.profiles?.email}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: '15px', fontWeight: '600', color: '#0D1B2A', margin: '0 0 3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nombre_propietario || 'Sin nombre'}</p>
+                        <p style={{ fontSize: '13px', color: '#9ca3af', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.direccion || 'Sin dirección'}</p>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '32px', alignItems: 'center', flexShrink: 0 }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 3px' }}>Precio venta</p>
+                          <p style={{ fontSize: '15px', fontWeight: '700', color: '#0D1B2A', margin: 0 }}>{fmt(c.precio_venta)}</p>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 3px' }}>Utilidad bruta</p>
+                          <p style={{ fontSize: '15px', fontWeight: '700', color: c.utilidad_bruta >= 0 ? '#16a34a' : '#dc2626', margin: 0 }}>{fmt(c.utilidad_bruta)}</p>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 3px' }}>Oferta A</p>
+                          <p style={{ fontSize: '15px', fontWeight: '700', color: '#2E6BE6', margin: 0 }}>{fmt(c.oferta_a)}</p>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 3px' }}>Fecha</p>
+                          <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>{new Date(c.created_at).toLocaleDateString('es-MX')}</p>
+                        </div>
+                        <button
+                          onClick={(e) => eliminarCotizacion(c.id, e)}
+                          style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: '500', cursor: 'pointer' }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#fee2e2'}
+                          onMouseLeave={e => e.currentTarget.style.background = '#fef2f2'}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
                     </div>
-                    <p className="font-semibold text-gray-900">{c.nombre_propietario || 'Sin nombre'}</p>
-                    <p className="text-sm text-gray-500">{c.direccion || 'Sin dirección'}</p>
-                    {c.notas && <p className="text-xs text-gray-400 mt-1">📝 {c.notas}</p>}
-                  </div>
-
-                  <div className="text-right shrink-0">
-                    <p className="font-bold text-gray-900">{fmt(c.precio_venta)}</p>
-                    <p className={`text-sm font-semibold ${c.utilidad_bruta >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(c.utilidad_bruta)}</p>
-                    <p className="text-xs text-blue-600 font-bold mt-1">A: {fmt(c.oferta_a)}</p>
-                  </div>
-
-                  <button
-                    onClick={() => eliminarCotizacion(c.id)}
-                    className="text-red-400 hover:text-red-600 text-sm transition-colors shrink-0"
-                  >
-                    Eliminar
-                  </button>
+                  ))}
                 </div>
-              </div>
-            ))}
-          </div>
+
+                {/* Paginación */}
+                {totalPaginas > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '32px' }}>
+                    <button onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1}
+                      style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#ffffff', color: pagina === 1 ? '#d1d5db' : '#0D1B2A', fontSize: '13px', fontWeight: '500', cursor: pagina === 1 ? 'not-allowed' : 'pointer' }}>
+                      ← Anterior
+                    </button>
+                    {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(n => (
+                      <button key={n} onClick={() => setPagina(n)}
+                        style={{ width: '36px', height: '36px', borderRadius: '8px', border: pagina === n ? '1px solid #1B3A6B' : '1px solid #e5e7eb', background: pagina === n ? '#1B3A6B' : '#ffffff', color: pagina === n ? '#ffffff' : '#6b7280', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}>
+                        {n}
+                      </button>
+                    ))}
+                    <button onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))} disabled={pagina === totalPaginas}
+                      style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#ffffff', color: pagina === totalPaginas ? '#d1d5db' : '#0D1B2A', fontSize: '13px', fontWeight: '500', cursor: pagina === totalPaginas ? 'not-allowed' : 'pointer' }}>
+                      Siguiente →
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </>
         ) : (
-          <div className="space-y-3">
+          /* Vista usuarios */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {usuarios.map(u => (
-              <div key={u.id} className="bg-white border border-gray-200 rounded-2xl p-5 flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-gray-900">{u.nombre}</p>
-                  <p className="text-sm text-gray-500">{u.email}</p>
+              <div key={u.id} style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '14px', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#f0f4ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '16px', fontWeight: '700', color: '#1B3A6B' }}>{u.nombre?.charAt(0) || 'U'}</span>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '15px', fontWeight: '600', color: '#0D1B2A', margin: '0 0 3px' }}>{u.nombre}</p>
+                    <p style={{ fontSize: '13px', color: '#9ca3af', margin: 0 }}>{u.email}</p>
+                  </div>
                 </div>
-                <span className={`text-xs font-medium px-3 py-1 rounded-full ${u.rol === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
-                  {u.rol}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <p style={{ fontSize: '12px', color: '#9ca3af', margin: 0 }}>
+                    Desde {new Date(u.created_at).toLocaleDateString('es-MX')}
+                  </p>
+                  <span style={{
+                    fontSize: '11px', fontWeight: '600', padding: '4px 14px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.5px',
+                    background: u.rol === 'admin' ? '#f0f4ff' : '#f3f4f6',
+                    color: u.rol === 'admin' ? '#1B3A6B' : '#6b7280',
+                    border: u.rol === 'admin' ? '1px solid #dbeafe' : '1px solid #e5e7eb',
+                  }}>
+                    {u.rol}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
         )}
-
       </div>
     </div>
   )
