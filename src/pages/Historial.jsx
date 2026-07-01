@@ -76,7 +76,7 @@ const Historial = () => {
         ) : (
           <div className="space-y-3">
             {cotizacionesFiltradas.map(c => (
-              <div key={c.id} className="bg-white border border-gray-200 rounded-2xl p-5 hover:border-blue-200 hover:shadow-sm transition-all">
+              <div key={c.id} onClick={() => navigate(`/cotizacion/${c.id}`)} className="bg-white border border-gray-200 rounded-2xl p-5 hover:border-blue-200 hover:shadow-sm transition-all cursor-pointer">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
