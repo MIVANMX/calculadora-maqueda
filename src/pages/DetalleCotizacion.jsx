@@ -66,7 +66,7 @@ const DetalleCotizacion = () => {
       {/* Hero */}
       <div style={{ background: '#0D1B2A', padding: '40px 0' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 32px' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+          <div className="detalle-hero-inner" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
             <div>
               <button
                 onClick={() => navigate('/historial')}
@@ -85,7 +85,7 @@ const DetalleCotizacion = () => {
               </h1>
               <p style={{ fontSize: '14px', color: '#6b87a8', margin: 0 }}>{cotizacion.direccion || 'Sin dirección'}</p>
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div className="detalle-btns" style={{ display: 'flex', gap: '10px' }}>
               <button
                 onClick={() => navigate(`/editar-cotizacion/${id}`)}
                 style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#ffffff', borderRadius: '10px', padding: '10px 20px', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}
@@ -110,7 +110,7 @@ const DetalleCotizacion = () => {
 
       {/* Contenido */}
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
+        <div className="detalle-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
 
           {/* Columna izquierda */}
           <div>
@@ -193,7 +193,7 @@ const DetalleCotizacion = () => {
           </div>
 
           {/* Panel resultados */}
-          <div style={{ position: 'sticky', top: '80px' }}>
+          <div className="detalle-resultados" style={{ position: 'sticky', top: '80px' }}>
             <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', border: '1px solid #e5e7eb' }}>
               <p style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', margin: '0 0 20px', letterSpacing: '0.8px', textTransform: 'uppercase' }}>Resultados</p>
 
@@ -239,6 +239,15 @@ const DetalleCotizacion = () => {
 
         </div>
       </div>
+
+      <style>{`
+  @media (max-width: 768px) {
+    .detalle-hero-inner { flex-direction: column !important; align-items: flex-start !important; gap: 16px !important; }
+    .detalle-btns { flex-direction: row !important; width: 100% !important; }
+    .detalle-grid { grid-template-columns: 1fr !important; }
+    .detalle-resultados { position: static !important; }
+  }
+`}</style>
     </div>
   )
 }

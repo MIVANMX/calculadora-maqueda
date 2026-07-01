@@ -84,7 +84,7 @@ const InviteForm = ({ onSuccess }) => {
 
   return (
     <form onSubmit={handleInvite}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 160px', gap: '16px', marginBottom: '16px' }}>
+      <div className="admin-invite-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 160px', gap: '16px', marginBottom: '16px' }}>
         <div>
           <label style={labelStyle}>Nombre completo</label>
           <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} style={inputStyle} placeholder="Ej. Juan Pérez" required
@@ -224,13 +224,14 @@ const Admin = () => {
       {/* Hero */}
       <div style={{ background: '#0D1B2A', padding: '40px 0' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 32px' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+          <div className="admin-hero-inner" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
             <div>
               <p style={{ fontSize: '12px', color: '#6b87a8', margin: '0 0 8px', letterSpacing: '0.8px', textTransform: 'uppercase', fontWeight: '500' }}>Administración</p>
               <h1 style={{ fontSize: '26px', fontWeight: '700', color: '#ffffff', margin: '0 0 6px', letterSpacing: '-0.5px' }}>Panel Admin</h1>
               <p style={{ fontSize: '14px', color: '#6b87a8', margin: 0 }}>Gestión global del sistema</p>
             </div>
-            <div style={{ display: 'flex', gap: '1px', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <div className="admin-stats">
+              <div className="admin-stats-inner" style={{ display: 'flex', gap: '1px', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
               <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 24px', textAlign: 'center' }}>
                 <p style={{ fontSize: '22px', fontWeight: '700', color: '#ffffff', margin: '0 0 2px' }}>{cotizaciones.length}</p>
                 <p style={{ fontSize: '11px', color: '#6b87a8', margin: 0 }}>Cotizaciones</p>
@@ -252,6 +253,7 @@ const Admin = () => {
               </div>
             </div>
           </div>
+          </div>
         </div>
       </div>
 
@@ -259,7 +261,7 @@ const Admin = () => {
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px' }}>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '6px', marginBottom: '24px' }}>
+        <div className="admin-tabs" style={{ display: 'flex', gap: '6px', marginBottom: '24px' }}>
           {[
             { key: 'cotizaciones', label: `Cotizaciones (${cotizaciones.length})` },
             { key: 'usuarios', label: `Usuarios (${usuarios.length})` },
@@ -309,7 +311,7 @@ const Admin = () => {
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {paginadas.map(c => (
-                    <div key={c.id} style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '14px', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', transition: 'all 0.2s' }}
+                    <div key={c.id} className="admin-row" style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '14px', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', transition: 'all 0.2s' }}
                       onMouseEnter={e => { e.currentTarget.style.borderColor = '#1B3A6B'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(13,27,42,0.08)' }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = 'none' }}
                     >
@@ -327,22 +329,24 @@ const Admin = () => {
                         <p style={{ fontSize: '13px', color: '#9ca3af', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.direccion || 'Sin dirección'}</p>
                       </div>
 
-                      <div style={{ display: 'flex', gap: '32px', alignItems: 'center', flexShrink: 0 }}>
-                        <div style={{ textAlign: 'right' }}>
-                          <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 3px' }}>Precio venta</p>
-                          <p style={{ fontSize: '15px', fontWeight: '700', color: '#0D1B2A', margin: 0 }}>{fmt(c.precio_venta)}</p>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 3px' }}>Utilidad bruta</p>
-                          <p style={{ fontSize: '15px', fontWeight: '700', color: c.utilidad_bruta >= 0 ? '#16a34a' : '#dc2626', margin: 0 }}>{fmt(c.utilidad_bruta)}</p>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 3px' }}>Oferta A</p>
-                          <p style={{ fontSize: '15px', fontWeight: '700', color: '#2E6BE6', margin: 0 }}>{fmt(c.oferta_a)}</p>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 3px' }}>Fecha</p>
-                          <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>{new Date(c.created_at).toLocaleDateString('es-MX')}</p>
+                      <div className="admin-row-btns" style={{ display: 'flex', gap: '24px', alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
+                        <div className="admin-row-metricas" style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+                          <div style={{ textAlign: 'right' }}>
+                            <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 3px' }}>Precio venta</p>
+                            <p style={{ fontSize: '15px', fontWeight: '700', color: '#0D1B2A', margin: 0 }}>{fmt(c.precio_venta)}</p>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 3px' }}>Utilidad bruta</p>
+                            <p style={{ fontSize: '15px', fontWeight: '700', color: c.utilidad_bruta >= 0 ? '#16a34a' : '#dc2626', margin: 0 }}>{fmt(c.utilidad_bruta)}</p>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 3px' }}>Oferta A</p>
+                            <p style={{ fontSize: '15px', fontWeight: '700', color: '#2E6BE6', margin: 0 }}>{fmt(c.oferta_a)}</p>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 3px' }}>Fecha</p>
+                            <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>{new Date(c.created_at).toLocaleDateString('es-MX')}</p>
+                          </div>
                         </div>
                         <button
                           onClick={(e) => eliminarCotizacion(c.id, e)}
@@ -359,7 +363,7 @@ const Admin = () => {
 
                 {/* Paginación */}
                 {totalPaginas > 1 && (
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '32px' }}>
+                  <div className="admin-paginacion" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '32px' }}>
                     <button onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1}
                       style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#ffffff', color: pagina === 1 ? '#d1d5db' : '#0D1B2A', fontSize: '13px', fontWeight: '500', cursor: pagina === 1 ? 'not-allowed' : 'pointer' }}>
                       ← Anterior
@@ -393,7 +397,7 @@ const Admin = () => {
             {/* Lista usuarios */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {usuarios.map(u => (
-                <div key={u.id} style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '14px', padding: '20px 24px', transition: 'all 0.2s' }}
+                <div key={u.id} className="admin-user-row" style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '14px', padding: '20px 24px', transition: 'all 0.2s' }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = '#1B3A6B'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(13,27,42,0.08)' }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = 'none' }}
                 >
@@ -409,7 +413,7 @@ const Admin = () => {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div className="admin-user-btns" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ fontSize: '11px', fontWeight: '600', padding: '4px 14px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.5px',
                         background: u.rol === 'admin' ? '#f0f4ff' : '#f3f4f6',
                         color: u.rol === 'admin' ? '#1B3A6B' : '#6b7280',
@@ -463,6 +467,22 @@ const Admin = () => {
           </div>
         )}
       </div>
+
+      <style>{`
+  @media (max-width: 768px) {
+    .admin-hero-inner { flex-direction: column !important; align-items: flex-start !important; gap: 20px !important; }
+    .admin-stats { width: 100% !important; }
+    .admin-stats-inner { width: 100% !important; }
+    .admin-tabs { flex-wrap: wrap !important; }
+    .admin-invite-grid { grid-template-columns: 1fr !important; }
+    .admin-row { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
+    .admin-row-metricas { flex-wrap: wrap !important; gap: 12px !important; }
+    .admin-row-btns { flex-wrap: wrap !important; gap: 8px !important; }
+    .admin-user-row { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
+    .admin-user-btns { flex-wrap: wrap !important; gap: 8px !important; }
+    .admin-paginacion { flex-wrap: wrap !important; }
+  }
+`}</style>
     </div>
   )
 }

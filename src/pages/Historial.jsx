@@ -49,14 +49,14 @@ const Historial = () => {
       {/* Hero */}
       <div style={{ background: '#0D1B2A', padding: '40px 0' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 32px' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+          <div className="historial-hero" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
             <div>
               <p style={{ fontSize: '12px', color: '#6b87a8', margin: '0 0 8px', letterSpacing: '0.8px', textTransform: 'uppercase', fontWeight: '500' }}>Historial</p>
               <h1 style={{ fontSize: '26px', fontWeight: '700', color: '#ffffff', margin: '0 0 6px', letterSpacing: '-0.5px' }}>Cotizaciones</h1>
               <p style={{ fontSize: '14px', color: '#6b87a8', margin: 0 }}>Registro completo de propiedades evaluadas</p>
             </div>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <div style={{ display: 'flex', gap: '1px', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <div className="historial-stats" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <div className="historial-stats-inner" style={{ display: 'flex', gap: '1px', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
                 <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 24px', textAlign: 'center' }}>
                   <p style={{ fontSize: '22px', fontWeight: '700', color: '#ffffff', margin: '0 0 2px' }}>{cotizaciones.length}</p>
                   <p style={{ fontSize: '11px', color: '#6b87a8', margin: 0 }}>Total</p>
@@ -89,7 +89,7 @@ const Historial = () => {
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px' }}>
 
         {/* Búsqueda y filtros */}
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', alignItems: 'center' }}>
+        <div className="historial-filtros" style={{ display: 'flex', gap: '12px', marginBottom: '24px', alignItems: 'center' }}>
           <div style={{ position: 'relative', flex: 1 }}>
             <svg style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -104,7 +104,7 @@ const Historial = () => {
               onBlur={e => e.target.style.borderColor = '#e5e7eb'}
             />
           </div>
-          <div style={{ display: 'flex', gap: '6px' }}>
+          <div className="historial-filtros-btns" style={{ display: 'flex', gap: '6px' }}>
             {[
               { key: 'todas', label: 'Todas' },
               { key: 'viables', label: 'Viables' },
@@ -145,6 +145,7 @@ const Historial = () => {
                 <div
                   key={c.id}
                   onClick={() => navigate(`/cotizacion/${c.id}`)}
+                  className="historial-row"
                   style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '14px', padding: '20px 24px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px' }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = '#1B3A6B'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(13,27,42,0.08)' }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = 'none' }}
@@ -160,7 +161,7 @@ const Historial = () => {
                     <p style={{ fontSize: '13px', color: '#9ca3af', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.direccion || 'Sin dirección'}</p>
                     {c.notas && <p style={{ fontSize: '12px', color: '#b0b8c4', margin: '4px 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Nota: {c.notas}</p>}
                   </div>
-                  <div style={{ display: 'flex', gap: '32px', alignItems: 'center', flexShrink: 0 }}>
+                  <div className="historial-metricas" style={{ display: 'flex', gap: '32px', alignItems: 'center', flexShrink: 0 }}>
                     <div style={{ textAlign: 'right' }}>
                       <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 3px' }}>Precio venta</p>
                       <p style={{ fontSize: '15px', fontWeight: '700', color: '#0D1B2A', margin: 0 }}>{fmt(c.precio_venta)}</p>
@@ -185,7 +186,7 @@ const Historial = () => {
 
             {/* Paginación */}
             {totalPaginas > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '32px' }}>
+              <div className="historial-paginacion" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '32px' }}>
                 <button
                   onClick={() => setPagina(p => Math.max(1, p - 1))}
                   disabled={pagina === 1}
@@ -214,6 +215,19 @@ const Historial = () => {
           </>
         )}
       </div>
+
+      <style>{`
+  @media (max-width: 768px) {
+    .historial-hero { flex-direction: column !important; align-items: flex-start !important; gap: 20px !important; }
+    .historial-stats { width: 100% !important; }
+    .historial-stats-inner { width: 100% !important; }
+    .historial-filtros { flex-direction: column !important; }
+    .historial-filtros-btns { flex-wrap: wrap !important; }
+    .historial-row { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
+    .historial-metricas { flex-wrap: wrap !important; gap: 16px !important; justify-content: flex-start !important; }
+    .historial-paginacion { flex-wrap: wrap !important; }
+  }
+`}</style>
     </div>
   )
 }

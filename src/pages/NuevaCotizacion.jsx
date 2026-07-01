@@ -142,7 +142,7 @@ const NuevaCotizacion = () => {
       <Navbar />
 
       {/* Hero */}
-      <div style={{ background: '#0D1B2A', padding: '40px 0' }}>
+      <div className="cotizacion-hero" style={{ background: '#0D1B2A', padding: '40px 0' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 32px' }}>
           <p style={{ fontSize: '12px', color: '#6b87a8', margin: '0 0 8px', letterSpacing: '0.8px', textTransform: 'uppercase', fontWeight: '500' }}>Nueva evaluación</p>
           <h1 style={{ fontSize: '26px', fontWeight: '700', color: '#ffffff', margin: '0 0 6px', letterSpacing: '-0.5px' }}>Nueva Cotización</h1>
@@ -152,7 +152,7 @@ const NuevaCotizacion = () => {
 
       {/* Contenido */}
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
+        <div className="cotizacion-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
 
           {/* Columna izquierda */}
           <div>
@@ -160,7 +160,7 @@ const NuevaCotizacion = () => {
             {/* Datos de la propiedad */}
             <div style={cardStyle}>
               <p style={sectionTitle}>Datos de la propiedad</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="cotizacion-campos-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div style={{ gridColumn: '1 / -1' }}>
                   <label style={labelStyle}>Nombre del propietario</label>
                   <input name="nombre_propietario" value={form.nombre_propietario} onChange={handleChange} style={inputStyle} placeholder="Ej. Juan Pérez García"
@@ -207,7 +207,7 @@ const NuevaCotizacion = () => {
             {/* Adeudos */}
             <div style={cardStyle}>
               <p style={sectionTitle}>Adeudos</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="cotizacion-campos-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 {[
                   { name: 'adeudo_luz', label: 'Adeudo LUZ' },
                   { name: 'adeudo_agua', label: 'Adeudo AGUA' },
@@ -226,7 +226,7 @@ const NuevaCotizacion = () => {
             {/* Costos operativos */}
             <div style={cardStyle}>
               <p style={sectionTitle}>Costos operativos</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="cotizacion-campos-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 {[
                   { name: 'costo_remodelacion', label: 'Remodelación' },
                   { name: 'costo_isr', label: 'Provisión ISR' },
@@ -249,7 +249,7 @@ const NuevaCotizacion = () => {
             {/* Parámetros de oferta */}
             <div style={cardStyle}>
               <p style={sectionTitle}>Parámetros de oferta</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+              <div className="cotizacion-campos-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                 {[
                   { name: 'porcentaje_oferta_a', label: '% Oferta A' },
                   { name: 'incremento_oferta_b', label: 'Incremento B (+$)' },
@@ -276,7 +276,7 @@ const NuevaCotizacion = () => {
           </div>
 
           {/* Panel de resultados sticky */}
-          <div style={{ position: 'sticky', top: '80px' }}>
+          <div className="cotizacion-resultados" style={{ position: 'sticky', top: '80px' }}>
             <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', border: '1px solid #e5e7eb' }}>
               <p style={{ fontSize: '12px', color: '#9ca3af', margin: '0 0 20px', letterSpacing: '0.8px', textTransform: 'uppercase', fontWeight: '600' }}>Resultados</p>
 
@@ -341,6 +341,16 @@ const NuevaCotizacion = () => {
 
         </div>
       </div>
+
+      <style>{`
+  @media (max-width: 768px) {
+    .cotizacion-grid { grid-template-columns: 1fr !important; }
+    .cotizacion-resultados { position: static !important; }
+    .cotizacion-hero { padding: 28px 20px !important; }
+    .cotizacion-campos-2 { grid-template-columns: 1fr !important; }
+    .cotizacion-campos-3 { grid-template-columns: 1fr !important; }
+  }
+`}</style>
     </div>
   )
 }
