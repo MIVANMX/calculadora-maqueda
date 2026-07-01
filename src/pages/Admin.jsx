@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import Navbar from '../components/Navbar'
+import Toast from '../components/Toast'
+import Modal from '../components/Modal'
 const fmt = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n)
 
 const EditarNombreUser = ({ usuario, onSuccess, onCancel }) => {
@@ -127,6 +129,8 @@ const InviteForm = ({ onSuccess }) => {
 const Admin = () => {
   const [editandoUser, setEditandoUser] = useState(null)
   const [loadingUser, setLoadingUser] = useState(false)
+  const [toast, setToast] = useState(null)
+  const [modal, setModal] = useState(null)
   const [cotizaciones, setCotizaciones] = useState([])
   const [usuarios, setUsuarios] = useState([])
   const [loading, setLoading] = useState(true)
@@ -169,25 +173,52 @@ const Admin = () => {
   const totalPaginas = Math.ceil(cotizacionesFiltradas.length / POR_PAGINA)
   const paginadas = cotizacionesFiltradas.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA)
 
+  const showToast = (message, type = 'success') => setToast({ message, type })
+  const showModal = (title, message, onConfirm, danger = false, confirmText = 'Confirmar') => {
+    setModal({ title, message, onConfirm, danger, confirmText })
+  }
+
   const handleCambiarRol = async (userId, rolActual) => {
     const nuevoRol = rolActual === 'admin' ? 'vendedor' : 'admin'
-    if (!confirm(`¿Cambiar rol a ${nuevoRol}?`)) return
-    setLoadingUser(userId)
-    await supabase.from('profiles').update({ rol: nuevoRol }).eq('id', userId)
-    await fetchData()
-    setLoadingUser(null)
+    showModal(
+      'Cambiar rol',
+      `¿Cambiar el rol de este usuario a ${nuevoRol}?`,
+      async () => {
+        setModal(null)
+        setLoadingUser(userId)
+        const { error } = await supabase.from('profiles').update({ rol: nuevoRol }).eq('id', userId)
+        if (!error) showToast(`Rol cambiado a ${nuevoRol} correctamente`)
+        else showToast('Error al cambiar el rol', 'error')
+        await fetchData()
+        setLoadingUser(null)
+      },
+      false,
+      `Hacer ${nuevoRol}`
+    )
   }
 
   const handleEliminarUsuario = async (userId, email) => {
-    if (!confirm(`¿Eliminar al usuario ${email}? Esta acción no se puede deshacer.`)) return
-    setLoadingUser(userId)
-    await supabase.from('profiles').delete().eq('id', userId)
-    await fetchData()
-    setLoadingUser(null)
+    showModal(
+      'Eliminar usuario',
+      `¿Estás seguro de eliminar a ${email}? Esta acción no se puede deshacer.`,
+      async () => {
+        setModal(null)
+        setLoadingUser(userId)
+        const { error } = await supabase.from('profiles').delete().eq('id', userId)
+        if (!error) showToast('Usuario eliminado correctamente')
+        else showToast('Error al eliminar el usuario', 'error')
+        await fetchData()
+        setLoadingUser(null)
+      },
+      true,
+      'Eliminar'
+    )
   }
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {modal && <Modal title={modal.title} message={modal.message} onConfirm={modal.onConfirm} onCancel={() => setModal(null)} danger={modal.danger} confirmText={modal.confirmText} />}
       <Navbar />
 
       {/* Hero */}
