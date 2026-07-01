@@ -19,35 +19,36 @@ const defaultCostos = {
 }
 
 const calcular = (form) => {
-  const precio = parseFloat(form.precio_venta) || 0
-  const luz = parseFloat(form.adeudo_luz) || 0
-  const agua = parseFloat(form.adeudo_agua) || 0
-  const predial = parseFloat(form.adeudo_predial) || 0
-  const infonavit = parseFloat(form.adeudo_infonavit) || 0
+  const precio = parseNum(form.precio_venta)
+  const luz = parseNum(form.adeudo_luz)
+  const agua = parseNum(form.adeudo_agua)
+  const predial = parseNum(form.adeudo_predial)
+  const infonavit = parseNum(form.adeudo_infonavit)
   const total_adeudos = luz + agua + predial + infonavit
 
-  const comision = precio * (parseFloat(form.comision_vendedor) / 100)
+  const comision = precio * (parseNum(form.comision_vendedor) / 100)
   const total_costos_operativos =
-    parseFloat(form.costo_remodelacion) +
-    parseFloat(form.costo_isr) +
+    parseNum(form.costo_remodelacion) +
+    parseNum(form.costo_isr) +
     comision +
-    parseFloat(form.pago_cerrador) +
-    parseFloat(form.pago_prospeccion) +
-    parseFloat(form.tramites_varios) +
-    parseFloat(form.cancelacion_hipoteca) +
-    parseFloat(form.otros_gastos)
+    parseNum(form.pago_cerrador) +
+    parseNum(form.pago_prospeccion) +
+    parseNum(form.tramites_varios) +
+    parseNum(form.cancelacion_hipoteca) +
+    parseNum(form.otros_gastos)
 
   const costo_total = total_adeudos + total_costos_operativos
   const utilidad_bruta = precio - costo_total
   const viable = utilidad_bruta > 0
-  const oferta_a = utilidad_bruta * (parseFloat(form.porcentaje_oferta_a) / 100)
-  const oferta_b = oferta_a + parseFloat(form.incremento_oferta_b)
-  const oferta_c = oferta_b + parseFloat(form.incremento_oferta_c)
+  const oferta_a = utilidad_bruta * (parseNum(form.porcentaje_oferta_a) / 100)
+  const oferta_b = oferta_a + parseNum(form.incremento_oferta_b)
+  const oferta_c = oferta_b + parseNum(form.incremento_oferta_c)
 
   return { total_adeudos, total_costos_operativos, costo_total, utilidad_bruta, viable, oferta_a, oferta_b, oferta_c }
 }
 
 const fmt = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n)
+const parseNum = (val) => parseFloat(String(val).replace(/,/g, '')) || 0
 
 const NuevaCotizacion = () => {
   const { user } = useAuth()
@@ -75,8 +76,6 @@ const NuevaCotizacion = () => {
 
   const handleGuardar = async () => {
     setSaving(true)
-    
-    const toNum = (val) => parseFloat(val) || 0
 
     const { error } = await supabase.from('quotations').insert({
       user_id: user.id,
@@ -84,22 +83,22 @@ const NuevaCotizacion = () => {
       direccion: form.direccion,
       link_maps: form.link_maps,
       tipo_inmueble: form.tipo_inmueble,
-      precio_venta: toNum(form.precio_venta),
-      adeudo_luz: toNum(form.adeudo_luz),
-      adeudo_agua: toNum(form.adeudo_agua),
-      adeudo_predial: toNum(form.adeudo_predial),
-      adeudo_infonavit: toNum(form.adeudo_infonavit),
-      costo_remodelacion: toNum(form.costo_remodelacion),
-      costo_isr: toNum(form.costo_isr),
-      comision_vendedor: toNum(form.comision_vendedor),
-      pago_cerrador: toNum(form.pago_cerrador),
-      pago_prospeccion: toNum(form.pago_prospeccion),
-      tramites_varios: toNum(form.tramites_varios),
-      cancelacion_hipoteca: toNum(form.cancelacion_hipoteca),
-      otros_gastos: toNum(form.otros_gastos),
-      porcentaje_oferta_a: toNum(form.porcentaje_oferta_a),
-      incremento_oferta_b: toNum(form.incremento_oferta_b),
-      incremento_oferta_c: toNum(form.incremento_oferta_c),
+      precio_venta: parseNum(form.precio_venta),
+      adeudo_luz: parseNum(form.adeudo_luz),
+      adeudo_agua: parseNum(form.adeudo_agua),
+      adeudo_predial: parseNum(form.adeudo_predial),
+      adeudo_infonavit: parseNum(form.adeudo_infonavit),
+      costo_remodelacion: parseNum(form.costo_remodelacion),
+      costo_isr: parseNum(form.costo_isr),
+      comision_vendedor: parseNum(form.comision_vendedor),
+      pago_cerrador: parseNum(form.pago_cerrador),
+      pago_prospeccion: parseNum(form.pago_prospeccion),
+      tramites_varios: parseNum(form.tramites_varios),
+      cancelacion_hipoteca: parseNum(form.cancelacion_hipoteca),
+      otros_gastos: parseNum(form.otros_gastos),
+      porcentaje_oferta_a: parseNum(form.porcentaje_oferta_a),
+      incremento_oferta_b: parseNum(form.incremento_oferta_b),
+      incremento_oferta_c: parseNum(form.incremento_oferta_c),
       notas: form.notas,
       ...resultados,
     })
@@ -152,7 +151,7 @@ const NuevaCotizacion = () => {
                 </div>
                 <div>
                   <label className={labelClass}>Precio de venta</label>
-                  <input name="precio_venta" type="number" value={form.precio_venta} onChange={handleChange} className={inputClass} placeholder="0" />
+                  <input name="precio_venta" type="text" value={form.precio_venta} onChange={handleChange} className={inputClass} placeholder="0" />
                 </div>
               </div>
             </div>
@@ -163,19 +162,19 @@ const NuevaCotizacion = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass}>Adeudo LUZ</label>
-                  <input name="adeudo_luz" type="number" value={form.adeudo_luz} onChange={handleChange} className={inputClass} placeholder="0" />
+                  <input name="adeudo_luz" type="text" value={form.adeudo_luz} onChange={handleChange} className={inputClass} placeholder="0" />
                 </div>
                 <div>
                   <label className={labelClass}>Adeudo AGUA</label>
-                  <input name="adeudo_agua" type="number" value={form.adeudo_agua} onChange={handleChange} className={inputClass} placeholder="0" />
+                  <input name="adeudo_agua" type="text" value={form.adeudo_agua} onChange={handleChange} className={inputClass} placeholder="0" />
                 </div>
                 <div>
                   <label className={labelClass}>Adeudo PREDIAL</label>
-                  <input name="adeudo_predial" type="number" value={form.adeudo_predial} onChange={handleChange} className={inputClass} placeholder="0" />
+                  <input name="adeudo_predial" type="text" value={form.adeudo_predial} onChange={handleChange} className={inputClass} placeholder="0" />
                 </div>
                 <div>
                   <label className={labelClass}>Adeudo INFONAVIT</label>
-                  <input name="adeudo_infonavit" type="number" value={form.adeudo_infonavit} onChange={handleChange} className={inputClass} placeholder="0" />
+                  <input name="adeudo_infonavit" type="text" value={form.adeudo_infonavit} onChange={handleChange} className={inputClass} placeholder="0" />
                 </div>
               </div>
             </div>
