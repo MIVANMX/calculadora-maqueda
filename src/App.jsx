@@ -7,6 +7,8 @@ import Historial from './pages/Historial'
 import Admin from './pages/Admin'
 import DetalleCotizacion from './pages/DetalleCotizacion'
 import EditarCotizacion from './pages/EditarCotizacion'
+import SetPassword from './pages/SetPassword'
+import Perfil from './pages/Perfil'
 
 function App() {
   return (
@@ -35,6 +37,12 @@ function App() {
 
       <Route path="/admin" element={
         <PrivateRoute adminOnly={true}><Admin /></PrivateRoute>
+      } />
+
+      <Route path="/set-password" element={<SetPassword />} />
+
+      <Route path="/perfil" element={
+        <PrivateRoute><Perfil /></PrivateRoute>
       } />
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

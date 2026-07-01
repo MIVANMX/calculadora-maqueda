@@ -1,8 +1,93 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import Navbar from '../components/Navbar'
-
 const fmt = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n)
+
+const InviteForm = ({ onSuccess }) => {
+  const [email, setEmail] = useState('')
+  const [nombre, setNombre] = useState('')
+  const [rol, setRol] = useState('vendedor')
+  const [loading, setLoading] = useState(false)
+  const [msg, setMsg] = useState('')
+  const [error, setError] = useState('')
+
+  const inputStyle = { width: '100%', padding: '10px 14px', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '13px', color: '#0D1B2A', background: '#f8fafc', outline: 'none', boxSizing: 'border-box' }
+  const labelStyle = { display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '6px', letterSpacing: '0.3px', textTransform: 'uppercase' }
+
+  const handleInvite = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setMsg('')
+    setError('')
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ email, nombre, rol }),
+      })
+      const result = await res.json()
+      if (result.error) { setError(result.error); }
+      else {
+        setMsg(`Invitación enviada a ${email}`)
+        setEmail('')
+        setNombre('')
+        setRol('vendedor')
+        onSuccess()
+      }
+    } catch (err) {
+      setError('Error al enviar la invitación')
+    }
+    setLoading(false)
+  }
+
+  return (
+    <form onSubmit={handleInvite}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 160px', gap: '16px', marginBottom: '16px' }}>
+        <div>
+          <label style={labelStyle}>Nombre completo</label>
+          <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} style={inputStyle} placeholder="Ej. Juan Pérez" required
+            onFocus={e => e.target.style.borderColor = '#2E6BE6'} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
+        </div>
+        <div>
+          <label style={labelStyle}>Correo electrónico</label>
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} placeholder="correo@ejemplo.com" required
+            onFocus={e => e.target.style.borderColor = '#2E6BE6'} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
+        </div>
+        <div>
+          <label style={labelStyle}>Rol</label>
+          <select value={rol} onChange={e => setRol(e.target.value)} style={inputStyle}>
+            <option value="vendedor">Vendedor</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+      </div>
+
+      {msg && (
+        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px' }}>
+          <p style={{ fontSize: '13px', color: '#16a34a', margin: 0 }}>✓ {msg}</p>
+        </div>
+      )}
+      {error && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px' }}>
+          <p style={{ fontSize: '13px', color: '#dc2626', margin: 0 }}>⚠️ {error}</p>
+        </div>
+      )}
+
+      <button type="submit" disabled={loading}
+        style={{ background: loading ? '#93afd4' : '#1B3A6B', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '11px 24px', fontSize: '13px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer' }}
+        onMouseEnter={e => { if (!loading) e.currentTarget.style.background = '#0D1B2A' }}
+        onMouseLeave={e => { if (!loading) e.currentTarget.style.background = '#1B3A6B' }}
+      >
+        {loading ? 'Enviando...' : 'Enviar invitación →'}
+      </button>
+    </form>
+  )
+}
 
 const Admin = () => {
   const [cotizaciones, setCotizaciones] = useState([])
@@ -211,33 +296,43 @@ const Admin = () => {
           </>
         ) : (
           /* Vista usuarios */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {usuarios.map(u => (
-              <div key={u.id} style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '14px', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#f0f4ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontSize: '16px', fontWeight: '700', color: '#1B3A6B' }}>{u.nombre?.charAt(0) || 'U'}</span>
+          <div>
+            {/* Formulario invitar */}
+            <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px', padding: '28px', marginBottom: '20px' }}>
+              <p style={{ fontSize: '15px', fontWeight: '700', color: '#0D1B2A', margin: '0 0 20px', paddingBottom: '14px', borderBottom: '2px solid #f3f4f6' }}>
+                Invitar nuevo usuario
+              </p>
+              <InviteForm onSuccess={fetchData} />
+            </div>
+
+            {/* Lista usuarios */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {usuarios.map(u => (
+                <div key={u.id} style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '14px', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#f0f4ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: '16px', fontWeight: '700', color: '#1B3A6B' }}>{u.nombre?.charAt(0) || 'U'}</span>
+                    </div>
+                    <div>
+                      <p style={{ fontSize: '15px', fontWeight: '600', color: '#0D1B2A', margin: '0 0 3px' }}>{u.nombre}</p>
+                      <p style={{ fontSize: '13px', color: '#9ca3af', margin: 0 }}>{u.email}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p style={{ fontSize: '15px', fontWeight: '600', color: '#0D1B2A', margin: '0 0 3px' }}>{u.nombre}</p>
-                    <p style={{ fontSize: '13px', color: '#9ca3af', margin: 0 }}>{u.email}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <p style={{ fontSize: '12px', color: '#9ca3af', margin: 0 }}>
+                      Desde {new Date(u.created_at).toLocaleDateString('es-MX')}
+                    </p>
+                    <span style={{ fontSize: '11px', fontWeight: '600', padding: '4px 14px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.5px',
+                      background: u.rol === 'admin' ? '#f0f4ff' : '#f3f4f6',
+                      color: u.rol === 'admin' ? '#1B3A6B' : '#6b7280',
+                      border: u.rol === 'admin' ? '1px solid #dbeafe' : '1px solid #e5e7eb',
+                    }}>
+                      {u.rol}
+                    </span>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <p style={{ fontSize: '12px', color: '#9ca3af', margin: 0 }}>
-                    Desde {new Date(u.created_at).toLocaleDateString('es-MX')}
-                  </p>
-                  <span style={{
-                    fontSize: '11px', fontWeight: '600', padding: '4px 14px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.5px',
-                    background: u.rol === 'admin' ? '#f0f4ff' : '#f3f4f6',
-                    color: u.rol === 'admin' ? '#1B3A6B' : '#6b7280',
-                    border: u.rol === 'admin' ? '1px solid #dbeafe' : '1px solid #e5e7eb',
-                  }}>
-                    {u.rol}
-                  </span>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
       </div>

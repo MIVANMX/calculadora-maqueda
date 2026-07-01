@@ -50,19 +50,25 @@ const Navbar = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
+        {/* Usuario */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            onClick={() => navigate('/perfil')}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', borderRadius: '8px', transition: 'background 0.15s' }}
+            onMouseEnter={e => e.currentTarget.style.background = '#f3f4f6'}
+            onMouseLeave={e => e.currentTarget.style.background = 'none'}
+          >
             <div className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-50">
-              <span className="text-xs font-semibold" style={{ color: '#1B3A6B' }}>
+              <span className="text-xs font-semibold" style={{color: '#1B3A6B'}}>
                 {profile?.nombre?.charAt(0) || 'U'}
               </span>
             </div>
-            <span className="text-sm font-medium" style={{ color: '#0D1B2A' }}>{profile?.nombre}</span>
-          </div>
+            <span style={{ fontSize: '13px', fontWeight: '500', color: '#0D1B2A' }}>{profile?.nombre}</span>
+          </button>
           <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full uppercase tracking-wide"
             style={profile?.rol === 'admin'
-              ? { background: '#f0f4ff', color: '#1B3A6B', border: '1px solid #dbeafe' }
-              : { background: '#f3f4f6', color: '#6b7280', border: '1px solid #e5e7eb' }
+              ? {background: '#f0f4ff', color: '#1B3A6B', border: '1px solid #dbeafe'}
+              : {background: '#f3f4f6', color: '#6b7280', border: '1px solid #e5e7eb'}
             }>
             {profile?.rol}
           </span>
