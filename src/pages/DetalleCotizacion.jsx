@@ -153,24 +153,9 @@ const DetalleCotizacion = () => {
             {/* Costos operativos */}
             <div style={cardStyle}>
               <p style={sectionTitle}>Costos operativos</p>
-              {[
-                { label: 'Remodelación', value: cotizacion.costo_remodelacion },
-                { label: 'Provisión ISR', value: cotizacion.costo_isr },
-                { label: `Comisión vendedor (${cotizacion.comision_vendedor}%)`, value: cotizacion.precio_venta * (cotizacion.comision_vendedor / 100) },
-                { label: 'Pago cerrador', value: cotizacion.pago_cerrador },
-                { label: 'Pago prospección', value: cotizacion.pago_prospeccion },
-                { label: 'Trámites varios', value: cotizacion.tramites_varios },
-                { label: 'Cancelación hipoteca', value: cotizacion.cancelacion_hipoteca },
-                { label: 'Otros gastos', value: cotizacion.otros_gastos },
-              ].map(({ label, value }) => (
-                <div key={label} style={rowStyle}>
-                  <span style={{ fontSize: '13px', color: '#6b7280' }}>{label}</span>
-                  <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>{fmt(value)}</span>
-                </div>
-              ))}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', marginTop: '4px' }}>
-                <span style={{ fontSize: '13px', fontWeight: '700', color: '#0D1B2A' }}>Total costos operativos</span>
-                <span style={{ fontSize: '16px', fontWeight: '700', color: '#374151' }}>{fmt(cotizacion.total_costos_operativos)}</span>
+              <div style={rowStyle}>
+                <span style={{ fontSize: '13px', color: '#6b7280' }}>Total costos operativos</span>
+                <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>{fmt(cotizacion.total_costos_operativos)}</span>
               </div>
             </div>
 
@@ -225,8 +210,8 @@ const DetalleCotizacion = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {[
                   { label: `Oferta A (${cotizacion.porcentaje_oferta_a}%)`, value: fmt(cotizacion.oferta_a), bg: '#EEF4FF', color: '#1B3A6B', border: '#dbeafe' },
-                  { label: 'Oferta B', value: fmt(cotizacion.oferta_b), bg: '#f8fafc', color: '#0D1B2A', border: '#e5e7eb' },
-                  { label: 'Oferta C', value: fmt(cotizacion.oferta_c), bg: '#f8fafc', color: '#0D1B2A', border: '#e5e7eb' },
+                  { label: `Oferta B (${cotizacion.porcentaje_oferta_b ?? 60}%)`, value: fmt(cotizacion.oferta_b), bg: '#f8fafc', color: '#0D1B2A', border: '#e5e7eb' },
+                  { label: `Oferta C (${cotizacion.porcentaje_oferta_c ?? 75}%)`, value: fmt(cotizacion.oferta_c), bg: '#f8fafc', color: '#0D1B2A', border: '#e5e7eb' },
                 ].map(o => (
                   <div key={o.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: o.bg, borderRadius: '10px', padding: '12px 16px', border: `1px solid ${o.border}` }}>
                     <span style={{ fontSize: '12px', color: '#6b87a8', fontWeight: '500' }}>{o.label}</span>
