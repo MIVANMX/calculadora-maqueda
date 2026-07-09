@@ -8,18 +8,12 @@ const parseNum = (val) => parseFloat(String(val).replace(/,/g, '')) || 0
 const fmt = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n)
 
 const defaultCostos = {
-  costo_remodelacion: 55000,
-  costo_isr: 30000,
-  comision_vendedor: 2.5,
-  pago_cerrador: 10000,
-  pago_prospeccion: 1000,
-  tramites_varios: 6300,
-  cancelacion_hipoteca: 5000,
-  otros_gastos: 5000,
-  porcentaje_oferta_a: 45,
-  incremento_oferta_b: 5000,
-  incremento_oferta_c: 2500,
+  costos_operativos: 0,
+  porcentaje_oferta_a: 30,
+  porcentaje_oferta_b: 60,
+  porcentaje_oferta_c: 75,
 }
+
 
 const calcular = (form) => {
   const precio = parseNum(form.precio_venta)
@@ -28,17 +22,13 @@ const calcular = (form) => {
   const predial = parseNum(form.adeudo_predial)
   const infonavit = parseNum(form.adeudo_infonavit)
   const total_adeudos = luz + agua + predial + infonavit
-  const comision = precio * (parseNum(form.comision_vendedor) / 100)
-  const total_costos_operativos =
-    parseNum(form.costo_remodelacion) + parseNum(form.costo_isr) + comision +
-    parseNum(form.pago_cerrador) + parseNum(form.pago_prospeccion) +
-    parseNum(form.tramites_varios) + parseNum(form.cancelacion_hipoteca) + parseNum(form.otros_gastos)
+  const total_costos_operativos = parseNum(form.costos_operativos)
   const costo_total = total_adeudos + total_costos_operativos
   const utilidad_bruta = precio - costo_total
   const viable = utilidad_bruta > 0
   const oferta_a = utilidad_bruta * (parseNum(form.porcentaje_oferta_a) / 100)
-  const oferta_b = oferta_a + parseNum(form.incremento_oferta_b)
-  const oferta_c = oferta_b + parseNum(form.incremento_oferta_c)
+  const oferta_b = utilidad_bruta * (parseNum(form.porcentaje_oferta_b) / 100)
+  const oferta_c = utilidad_bruta * (parseNum(form.porcentaje_oferta_c) / 100)
   return { total_adeudos, total_costos_operativos, costo_total, utilidad_bruta, viable, oferta_a, oferta_b, oferta_c }
 }
 
@@ -91,7 +81,11 @@ const NuevaCotizacion = () => {
   const [form, setForm] = useState({
     nombre_propietario: '', direccion: '', link_maps: '', tipo_inmueble: 'Casa',
     precio_venta: '', adeudo_luz: '', adeudo_agua: '', adeudo_predial: '', adeudo_infonavit: '',
-    notas: '', ...defaultCostos,
+    notas: '',
+    costos_operativos: '',
+    porcentaje_oferta_a: 30,
+    porcentaje_oferta_b: 60,
+    porcentaje_oferta_c: 75,
   })
 
   const resultados = calcular(form)
@@ -110,17 +104,18 @@ const NuevaCotizacion = () => {
       adeudo_agua: parseNum(form.adeudo_agua),
       adeudo_predial: parseNum(form.adeudo_predial),
       adeudo_infonavit: parseNum(form.adeudo_infonavit),
-      costo_remodelacion: parseNum(form.costo_remodelacion),
-      costo_isr: parseNum(form.costo_isr),
-      comision_vendedor: parseNum(form.comision_vendedor),
-      pago_cerrador: parseNum(form.pago_cerrador),
-      pago_prospeccion: parseNum(form.pago_prospeccion),
-      tramites_varios: parseNum(form.tramites_varios),
-      cancelacion_hipoteca: parseNum(form.cancelacion_hipoteca),
-      otros_gastos: parseNum(form.otros_gastos),
+      costos_operativos: parseNum(form.costos_operativos),
+      costo_remodelacion: 0,
+      costo_isr: 0,
+      comision_vendedor: 0,
+      pago_cerrador: 0,
+      pago_prospeccion: 0,
+      tramites_varios: 0,
+      cancelacion_hipoteca: 0,
+      otros_gastos: 0,
       porcentaje_oferta_a: parseNum(form.porcentaje_oferta_a),
-      incremento_oferta_b: parseNum(form.incremento_oferta_b),
-      incremento_oferta_c: parseNum(form.incremento_oferta_c),
+      incremento_oferta_b: 0,
+      incremento_oferta_c: 0,
       notas: form.notas,
       ...resultados,
     })
@@ -226,41 +221,38 @@ const NuevaCotizacion = () => {
             {/* Costos operativos */}
             <div style={cardStyle}>
               <p style={sectionTitle}>Costos operativos</p>
-              <div className="cotizacion-campos-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                {[
-                  { name: 'costo_remodelacion', label: 'Remodelación' },
-                  { name: 'costo_isr', label: 'Provisión ISR' },
-                  { name: 'comision_vendedor', label: 'Comisión vendedor (%)' },
-                  { name: 'pago_cerrador', label: 'Pago cerrador' },
-                  { name: 'pago_prospeccion', label: 'Pago prospección' },
-                  { name: 'tramites_varios', label: 'Trámites varios' },
-                  { name: 'cancelacion_hipoteca', label: 'Cancelación hipoteca' },
-                  { name: 'otros_gastos', label: 'Otros gastos' },
-                ].map(({ name, label }) => (
-                  <div key={name}>
-                    <label style={labelStyle}>{label}</label>
-                    <input name={name} type="text" value={form[name]} onChange={handleChange} style={inputStyle}
-                      onFocus={e => e.target.style.borderColor = '#2E6BE6'} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
-                  </div>
-                ))}
+              <p style={{ fontSize: '12px', color: '#9ca3af', margin: '0 0 16px' }}>
+                Ingresa el total de todos los costos operativos del proyecto (remodelación, ISR, comisiones, trámites, etc.)
+              </p>
+              <div>
+                <label style={labelStyle}>Total costos operativos</label>
+                <input name="costos_operativos" type="text" value={form.costos_operativos} onChange={handleChange} style={inputStyle} placeholder="0"
+                  onFocus={e => e.target.style.borderColor = '#2E6BE6'} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
               </div>
             </div>
 
             {/* Parámetros de oferta */}
             <div style={cardStyle}>
               <p style={sectionTitle}>Parámetros de oferta</p>
+              <p style={{ fontSize: '12px', color: '#9ca3af', margin: '0 0 16px' }}>
+                Porcentaje de la utilidad bruta que se ofrecerá en cada nivel.
+              </p>
               <div className="cotizacion-campos-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-                {[
-                  { name: 'porcentaje_oferta_a', label: '% Oferta A' },
-                  { name: 'incremento_oferta_b', label: 'Incremento B (+$)' },
-                  { name: 'incremento_oferta_c', label: 'Incremento C (+$)' },
-                ].map(({ name, label }) => (
-                  <div key={name}>
-                    <label style={labelStyle}>{label}</label>
-                    <input name={name} type="text" value={form[name]} onChange={handleChange} style={inputStyle}
-                      onFocus={e => e.target.style.borderColor = '#2E6BE6'} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
-                  </div>
-                ))}
+                <div>
+                  <label style={labelStyle}>% Oferta A</label>
+                  <input name="porcentaje_oferta_a" type="text" value={form.porcentaje_oferta_a} onChange={handleChange} style={inputStyle}
+                    onFocus={e => e.target.style.borderColor = '#2E6BE6'} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
+                </div>
+                <div>
+                  <label style={labelStyle}>% Oferta B</label>
+                  <input name="porcentaje_oferta_b" type="text" value={form.porcentaje_oferta_b} onChange={handleChange} style={inputStyle}
+                    onFocus={e => e.target.style.borderColor = '#2E6BE6'} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
+                </div>
+                <div>
+                  <label style={labelStyle}>% Oferta C</label>
+                  <input name="porcentaje_oferta_c" type="text" value={form.porcentaje_oferta_c} onChange={handleChange} style={inputStyle}
+                    onFocus={e => e.target.style.borderColor = '#2E6BE6'} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
+                </div>
               </div>
             </div>
 
@@ -317,8 +309,8 @@ const NuevaCotizacion = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
                 {[
                   { label: `Oferta A (${form.porcentaje_oferta_a}%)`, value: fmt(resultados.oferta_a), bg: '#EEF4FF', color: '#1B3A6B', border: '#dbeafe' },
-                  { label: 'Oferta B', value: fmt(resultados.oferta_b), bg: '#f8fafc', color: '#0D1B2A', border: '#e5e7eb' },
-                  { label: 'Oferta C', value: fmt(resultados.oferta_c), bg: '#f8fafc', color: '#0D1B2A', border: '#e5e7eb' },
+                  { label: `Oferta B (${form.porcentaje_oferta_b}%)`, value: fmt(resultados.oferta_b), bg: '#f8fafc', color: '#0D1B2A', border: '#e5e7eb' },
+                  { label: `Oferta C (${form.porcentaje_oferta_c}%)`, value: fmt(resultados.oferta_c), bg: '#f8fafc', color: '#0D1B2A', border: '#e5e7eb' },
                 ].map(o => (
                   <div key={o.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: o.bg, borderRadius: '10px', padding: '12px 16px', border: `1px solid ${o.border}` }}>
                     <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '500' }}>{o.label}</span>
