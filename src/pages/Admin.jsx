@@ -127,6 +127,11 @@ const InviteForm = ({ onSuccess }) => {
 }
 
 const Admin = () => {
+  const [preguntas, setPreguntas] = useState([])
+  const [nuevaPregunta, setNuevaPregunta] = useState('')
+  const [loadingPregunta, setLoadingPregunta] = useState(false)
+  const [toastPreguntas, setToastPreguntas] = useState(null)
+
   const [editandoUser, setEditandoUser] = useState(null)
   const [loadingUser, setLoadingUser] = useState(false)
   const [toast, setToast] = useState(null)
@@ -142,6 +147,14 @@ const Admin = () => {
   useEffect(() => { fetchData() }, [])
   useEffect(() => { setPagina(1) }, [busqueda, vista])
 
+  const fetchPreguntas = async () => {
+    const { data } = await supabase
+      .from('questions')
+      .select('*')
+      .order('orden', { ascending: true })
+    if (data) setPreguntas(data)
+  }
+
   const fetchData = async () => {
     setLoading(true)
     const [{ data: cots }, { data: users }] = await Promise.all([
@@ -150,6 +163,7 @@ const Admin = () => {
     ])
     if (cots) setCotizaciones(cots)
     if (users) setUsuarios(users)
+    await fetchPreguntas()
     setLoading(false)
   }
 
@@ -215,9 +229,48 @@ const Admin = () => {
     )
   }
 
+  const handleAgregarPregunta = async (e) => {
+    e.preventDefault()
+    if (!nuevaPregunta.trim()) return
+    setLoadingPregunta(true)
+    const { error } = await supabase.from('questions').insert({
+      pregunta: nuevaPregunta.trim(),
+      orden: preguntas.length,
+      activa: true,
+    })
+    if (!error) {
+      setNuevaPregunta('')
+      await fetchPreguntas()
+      showToast('Pregunta agregada correctamente')
+    } else {
+      showToast('Error al agregar pregunta', 'error')
+    }
+    setLoadingPregunta(false)
+  }
+
+  const handleEliminarPregunta = async (id) => {
+    showModal(
+      'Eliminar pregunta',
+      '¿Eliminar esta pregunta? Se quitará del formulario de cotización.',
+      async () => {
+        setModal(null)
+        const { error } = await supabase.from('questions').delete().eq('id', id)
+        if (!error) { await fetchPreguntas(); showToast('Pregunta eliminada') }
+        else showToast('Error al eliminar', 'error')
+      },
+      true, 'Eliminar'
+    )
+  }
+
+  const handleTogglePregunta = async (id, activa) => {
+    const { error } = await supabase.from('questions').update({ activa: !activa }).eq('id', id)
+    if (!error) { await fetchPreguntas(); showToast(activa ? 'Pregunta desactivada' : 'Pregunta activada') }
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: 'Inter, system-ui, sans-serif' }}>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {toastPreguntas && <Toast message={toastPreguntas.message} type={toastPreguntas.type} onClose={() => setToastPreguntas(null)} />}
       {modal && <Modal title={modal.title} message={modal.message} onConfirm={modal.onConfirm} onCancel={() => setModal(null)} danger={modal.danger} confirmText={modal.confirmText} />}
       <Navbar />
 
@@ -251,6 +304,11 @@ const Admin = () => {
                 <p style={{ fontSize: '22px', fontWeight: '700', color: '#60a5fa', margin: '0 0 2px' }}>{usuarios.length}</p>
                 <p style={{ fontSize: '11px', color: '#6b87a8', margin: 0 }}>Usuarios</p>
               </div>
+              <div style={{ width: '1px', background: 'rgba(255,255,255,0.08)' }} />
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 24px', textAlign: 'center' }}>
+                <p style={{ fontSize: '22px', fontWeight: '700', color: '#a78bfa', margin: '0 0 2px' }}>{preguntas.length}</p>
+                <p style={{ fontSize: '11px', color: '#6b87a8', margin: 0 }}>Preguntas</p>
+              </div>
             </div>
           </div>
           </div>
@@ -265,6 +323,7 @@ const Admin = () => {
           {[
             { key: 'cotizaciones', label: `Cotizaciones (${cotizaciones.length})` },
             { key: 'usuarios', label: `Usuarios (${usuarios.length})` },
+            { key: 'preguntas', label: `Preguntas (${preguntas.length})` },
           ].map(t => (
             <button
               key={t.key}
@@ -383,7 +442,7 @@ const Admin = () => {
               </>
             )}
           </>
-        ) : (
+        ) : vista === 'usuarios' ? (
           /* Vista usuarios */
           <div>
             {/* Formulario invitar */}
@@ -465,7 +524,78 @@ const Admin = () => {
               ))}
             </div>
           </div>
-        )}
+        ) : vista === 'preguntas' ? (
+          <div>
+            {/* Agregar pregunta */}
+            <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px', padding: '28px', marginBottom: '20px' }}>
+              <p style={{ fontSize: '15px', fontWeight: '700', color: '#0D1B2A', margin: '0 0 20px', paddingBottom: '14px', borderBottom: '2px solid #f3f4f6' }}>
+                Agregar pregunta
+              </p>
+              <p style={{ fontSize: '13px', color: '#6b7280', margin: '0 0 16px' }}>
+                Las preguntas activas aparecerán en el formulario de nueva cotización y el vendedor deberá responderlas.
+              </p>
+              <form onSubmit={handleAgregarPregunta} style={{ display: 'flex', gap: '10px' }}>
+                <input
+                  type="text"
+                  value={nuevaPregunta}
+                  onChange={e => setNuevaPregunta(e.target.value)}
+                  placeholder="Ej. ¿El propietario tiene escrituras?"
+                  style={{ flex: 1, padding: '10px 14px', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '13px', color: '#0D1B2A', background: '#f8fafc', outline: 'none' }}
+                  onFocus={e => e.target.style.borderColor = '#2E6BE6'}
+                  onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+                />
+                <button type="submit" disabled={loadingPregunta}
+                  style={{ background: '#1B3A6B', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '10px 20px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#0D1B2A'}
+                  onMouseLeave={e => e.currentTarget.style.background = '#1B3A6B'}
+                >
+                  {loadingPregunta ? 'Agregando...' : '+ Agregar'}
+                </button>
+              </form>
+            </div>
+
+            {/* Lista preguntas */}
+            {preguntas.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px', color: '#9ca3af', fontSize: '14px' }}>
+                No hay preguntas aún. Agrega la primera.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {preguntas.map((p, index) => (
+                  <div key={p.id} style={{ background: '#ffffff', border: `1px solid ${p.activa ? '#e5e7eb' : '#f3f4f6'}`, borderRadius: '14px', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', opacity: p.activa ? 1 : 0.6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, minWidth: 0 }}>
+                      <div style={{ width: '28px', height: '28px', background: '#f0f4ff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <span style={{ fontSize: '12px', fontWeight: '700', color: '#1B3A6B' }}>{index + 1}</span>
+                      </div>
+                      <p style={{ fontSize: '14px', fontWeight: '500', color: '#0D1B2A', margin: 0 }}>{p.pregunta}</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+                      <span style={{ fontSize: '11px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px', background: p.activa ? 'rgba(34,197,94,0.1)' : '#f3f4f6', color: p.activa ? '#16a34a' : '#9ca3af', border: p.activa ? '1px solid rgba(34,197,94,0.2)' : '1px solid #e5e7eb' }}>
+                        {p.activa ? 'Activa' : 'Inactiva'}
+                      </span>
+                      <button
+                        onClick={() => handleTogglePregunta(p.id, p.activa)}
+                        style={{ background: '#f8fafc', border: '1px solid #e5e7eb', color: '#6b7280', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '500', cursor: 'pointer' }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f3f4f6'}
+                        onMouseLeave={e => e.currentTarget.style.background = '#f8fafc'}
+                      >
+                        {p.activa ? 'Desactivar' : 'Activar'}
+                      </button>
+                      <button
+                        onClick={() => handleEliminarPregunta(p.id)}
+                        style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: '500', cursor: 'pointer' }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#fee2e2'}
+                        onMouseLeave={e => e.currentTarget.style.background = '#fef2f2'}
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
 
       <style>{`

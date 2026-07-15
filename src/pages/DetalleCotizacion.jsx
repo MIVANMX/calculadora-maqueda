@@ -159,6 +159,26 @@ const DetalleCotizacion = () => {
               </div>
             </div>
 
+            {/* Preguntas y respuestas */}
+            {cotizacion.respuestas && cotizacion.respuestas.length > 0 && (
+              <div style={cardStyle}>
+                <p style={sectionTitle}>Preguntas de evaluación</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {cotizacion.respuestas.map((r, index) => (
+                    <div key={index} style={{ padding: '14px 16px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e5e7eb' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <span style={{ background: '#f0f4ff', color: '#1B3A6B', fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '6px' }}>{index + 1}</span>
+                        <p style={{ fontSize: '13px', fontWeight: '600', color: '#374151', margin: 0 }}>{r.pregunta}</p>
+                      </div>
+                      <p style={{ fontSize: '14px', color: '#0D1B2A', margin: 0, paddingLeft: '32px' }}>
+                        {r.respuesta || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Sin respuesta</span>}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Notas */}
             {cotizacion.notes && (
               <div style={cardStyle}>
@@ -209,13 +229,21 @@ const DetalleCotizacion = () => {
               <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 10px', fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Niveles de oferta</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {[
-                  { label: `Oferta A (${cotizacion.porcentaje_oferta_a}%)`, value: fmt(cotizacion.oferta_a), bg: '#EEF4FF', color: '#1B3A6B', border: '#dbeafe' },
-                  { label: `Oferta B (${cotizacion.porcentaje_oferta_b ?? 60}%)`, value: fmt(cotizacion.oferta_b), bg: '#f8fafc', color: '#0D1B2A', border: '#e5e7eb' },
-                  { label: `Oferta C (${cotizacion.porcentaje_oferta_c ?? 75}%)`, value: fmt(cotizacion.oferta_c), bg: '#f8fafc', color: '#0D1B2A', border: '#e5e7eb' },
+                  { label: `Oferta A (${cotizacion.porcentaje_oferta_a}%)`, oferta: cotizacion.oferta_a },
+                  { label: `Oferta B (${cotizacion.porcentaje_oferta_b ?? 60}%)`, oferta: cotizacion.oferta_b },
+                  { label: `Oferta C (${cotizacion.porcentaje_oferta_c ?? 75}%)`, oferta: cotizacion.oferta_c },
                 ].map(o => (
-                  <div key={o.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: o.bg, borderRadius: '10px', padding: '12px 16px', border: `1px solid ${o.border}` }}>
-                    <span style={{ fontSize: '12px', color: '#6b87a8', fontWeight: '500' }}>{o.label}</span>
-                    <span style={{ fontSize: '15px', fontWeight: '700', color: o.color }}>{o.value}</span>
+                  <div key={o.label} style={{ borderRadius: '10px', padding: '12px 16px', border: '1px solid #dbeafe', background: '#EEF4FF' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '500' }}>{o.label}</span>
+                      <span style={{ fontSize: '15px', fontWeight: '700', color: '#1B3A6B' }}>{fmt(o.oferta)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #dbeafe', paddingTop: '8px' }}>
+                      <span style={{ fontSize: '11px', color: '#6b7280' }}>Ganancia Maqueda</span>
+                      <span style={{ fontSize: '13px', fontWeight: '700', color: cotizacion.utilidad_bruta - o.oferta >= 0 ? '#16a34a' : '#dc2626' }}>
+                        {fmt(cotizacion.utilidad_bruta - o.oferta)}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>

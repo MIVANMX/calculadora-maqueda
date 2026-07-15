@@ -34,8 +34,34 @@ const EditarCotizacion = () => {
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState(null)
+  const [preguntas, setPreguntas] = useState([])
+  const [respuestas, setRespuestas] = useState({})
 
   useEffect(() => { fetchCotizacion() }, [id])
+
+  useEffect(() => {
+    const fetchPreguntas = async () => {
+      const { data } = await supabase
+        .from('questions')
+        .select('*')
+        .eq('activa', true)
+        .order('orden', { ascending: true })
+      if (data) setPreguntas(data)
+    }
+    fetchPreguntas()
+  }, [])
+
+  useEffect(() => {
+    if (form?.respuestas) {
+      const map = {}
+      form.respuestas.forEach(r => { map[r.pregunta_id] = r.respuesta })
+      setRespuestas(map)
+    }
+  }, [form?.id])
+
+  const handleRespuesta = (id, valor) => {
+    setRespuestas({ ...respuestas, [id]: valor })
+  }
 
   const fetchCotizacion = async () => {
     const { data, error } = await supabase.from('quotations').select('*').eq('id', id).single()
@@ -79,6 +105,11 @@ const EditarCotizacion = () => {
       incremento_oferta_b: 0,
       incremento_oferta_c: 0,
       notes: form.notes,
+      respuestas: preguntas.map(p => ({
+        pregunta_id: p.id,
+        pregunta: p.pregunta,
+        respuesta: respuestas[p.id] || '',
+      })),
       ...resultados,
     }).eq('id', id)
     setSaving(false)
@@ -227,6 +258,35 @@ const EditarCotizacion = () => {
               </div>
             </div>
 
+            {/* Preguntas */}
+            {preguntas.length > 0 && (
+              <div style={cardStyle}>
+                <p style={sectionTitle}>Preguntas de evaluación</p>
+                <p style={{ fontSize: '12px', color: '#9ca3af', margin: '0 0 20px' }}>
+                  Actualiza las respuestas si es necesario.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {preguntas.map((p, index) => (
+                    <div key={p.id}>
+                      <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ background: '#f0f4ff', color: '#1B3A6B', fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '6px' }}>{index + 1}</span>
+                        {p.pregunta}
+                      </label>
+                      <input
+                        type="text"
+                        value={respuestas[p.id] || ''}
+                        onChange={e => handleRespuesta(p.id, e.target.value)}
+                        style={inputStyle}
+                        placeholder="Escribe tu respuesta..."
+                        onFocus={e => e.target.style.borderColor = '#2E6BE6'}
+                        onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Notas */}
             <div style={cardStyle}>
               <p style={sectionTitle}>Notas</p>
@@ -271,15 +331,23 @@ const EditarCotizacion = () => {
               </div>
 
               <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 10px', fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Niveles de oferta</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
                 {[
-                  { label: `Oferta A (${form.porcentaje_oferta_a}%)`, value: fmt(resultados.oferta_a), bg: '#EEF4FF', color: '#1B3A6B', border: '#dbeafe' },
-                  { label: `Oferta B (${form.porcentaje_oferta_b}%)`, value: fmt(resultados.oferta_b), bg: '#f8fafc', color: '#0D1B2A', border: '#e5e7eb' },
-                  { label: `Oferta C (${form.porcentaje_oferta_c}%)`, value: fmt(resultados.oferta_c), bg: '#f8fafc', color: '#0D1B2A', border: '#e5e7eb' },
+                  { label: `Oferta A (${form.porcentaje_oferta_a}%)`, oferta: resultados.oferta_a },
+                  { label: `Oferta B (${form.porcentaje_oferta_b}%)`, oferta: resultados.oferta_b },
+                  { label: `Oferta C (${form.porcentaje_oferta_c}%)`, oferta: resultados.oferta_c },
                 ].map(o => (
-                  <div key={o.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: o.bg, borderRadius: '10px', padding: '12px 16px', border: `1px solid ${o.border}` }}>
-                    <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '500' }}>{o.label}</span>
-                    <span style={{ fontSize: '15px', fontWeight: '700', color: o.color }}>{o.value}</span>
+                  <div key={o.label} style={{ borderRadius: '10px', padding: '12px 16px', border: '1px solid #dbeafe', background: '#EEF4FF' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '500' }}>{o.label}</span>
+                      <span style={{ fontSize: '15px', fontWeight: '700', color: '#1B3A6B' }}>{fmt(o.oferta)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #dbeafe', paddingTop: '8px' }}>
+                      <span style={{ fontSize: '11px', color: '#6b7280' }}>Ganancia Maqueda</span>
+                      <span style={{ fontSize: '13px', fontWeight: '700', color: resultados.utilidad_bruta - o.oferta >= 0 ? '#16a34a' : '#dc2626' }}>
+                        {fmt(resultados.utilidad_bruta - o.oferta)}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>

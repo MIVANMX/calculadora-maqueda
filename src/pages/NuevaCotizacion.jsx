@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import Navbar from '../components/Navbar'
+import Toast from '../components/Toast'
 
 const parseNum = (val) => parseFloat(String(val).replace(/,/g, '')) || 0
 const fmt = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n)
@@ -78,6 +79,11 @@ const NuevaCotizacion = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [saving, setSaving] = useState(false)
+  const [preguntas, setPreguntas] = useState([])
+  const [respuestas, setRespuestas] = useState({})
+  const [toast, setToast] = useState(null)
+
+  const showToast = (message, type = 'success') => setToast({ message, type })
   const [form, setForm] = useState({
     nombre_propietario: '', direccion: '', link_maps: '', tipo_inmueble: 'Casa',
     precio_venta: '', adeudo_luz: '', adeudo_agua: '', adeudo_predial: '', adeudo_infonavit: '',
@@ -88,10 +94,32 @@ const NuevaCotizacion = () => {
     porcentaje_oferta_c: 75,
   })
 
+  useEffect(() => {
+    const fetchPreguntas = async () => {
+      const { data } = await supabase
+        .from('questions')
+        .select('*')
+        .eq('activa', true)
+        .order('orden', { ascending: true })
+      if (data) setPreguntas(data)
+    }
+    fetchPreguntas()
+  }, [])
+
+  const handleRespuesta = (id, valor) => {
+    setRespuestas({ ...respuestas, [id]: valor })
+  }
+
   const resultados = calcular(form)
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
   const handleGuardar = async () => {
+    // Validar que todas las preguntas estén respondidas
+    const sinResponder = preguntas.filter(p => !respuestas[p.id] || respuestas[p.id].trim() === '')
+    if (sinResponder.length > 0) {
+      showToast(`Debes responder todas las preguntas antes de guardar`, 'error')
+      return
+    }
     setSaving(true)
     const { error } = await supabase.from('quotations').insert({
       user_id: user.id,
@@ -117,6 +145,11 @@ const NuevaCotizacion = () => {
       incremento_oferta_b: 0,
       incremento_oferta_c: 0,
       notas: form.notas,
+      respuestas: preguntas.map(p => ({
+        pregunta_id: p.id,
+        pregunta: p.pregunta,
+        respuesta: respuestas[p.id] || '',
+      })),
       ...resultados,
     })
     setSaving(false)
@@ -134,6 +167,7 @@ const NuevaCotizacion = () => {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <Navbar />
 
       {/* Hero */}
@@ -256,6 +290,37 @@ const NuevaCotizacion = () => {
               </div>
             </div>
 
+            {/* Preguntas */}
+            {preguntas.length > 0 && (
+              <div style={cardStyle}>
+                <p style={sectionTitle}>Preguntas de evaluación</p>
+                <p style={{ fontSize: '12px', color: '#9ca3af', margin: '0 0 20px' }}>
+                  Responde todas las preguntas antes de guardar la cotización.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {preguntas.map((p, index) => (
+                    <div key={p.id}>
+                      <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ background: '#f0f4ff', color: '#1B3A6B', fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '6px' }}>{index + 1}</span>
+                        {p.pregunta}
+                        <span style={{ color: '#dc2626', fontSize: '12px' }}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={respuestas[p.id] || ''}
+                        onChange={e => handleRespuesta(p.id, e.target.value)}
+                        style={inputStyle}
+                        placeholder="Escribe tu respuesta..."
+                        required
+                        onFocus={e => e.target.style.borderColor = '#2E6BE6'}
+                        onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Notas */}
             <div style={cardStyle}>
               <p style={sectionTitle}>Notas</p>
@@ -306,15 +371,23 @@ const NuevaCotizacion = () => {
 
               {/* Ofertas */}
               <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 10px', fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Niveles de oferta</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
                 {[
-                  { label: `Oferta A (${form.porcentaje_oferta_a}%)`, value: fmt(resultados.oferta_a), bg: '#EEF4FF', color: '#1B3A6B', border: '#dbeafe' },
-                  { label: `Oferta B (${form.porcentaje_oferta_b}%)`, value: fmt(resultados.oferta_b), bg: '#f8fafc', color: '#0D1B2A', border: '#e5e7eb' },
-                  { label: `Oferta C (${form.porcentaje_oferta_c}%)`, value: fmt(resultados.oferta_c), bg: '#f8fafc', color: '#0D1B2A', border: '#e5e7eb' },
+                  { label: `Oferta A (${form.porcentaje_oferta_a}%)`, oferta: resultados.oferta_a },
+                  { label: `Oferta B (${form.porcentaje_oferta_b}%)`, oferta: resultados.oferta_b },
+                  { label: `Oferta C (${form.porcentaje_oferta_c}%)`, oferta: resultados.oferta_c },
                 ].map(o => (
-                  <div key={o.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: o.bg, borderRadius: '10px', padding: '12px 16px', border: `1px solid ${o.border}` }}>
-                    <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '500' }}>{o.label}</span>
-                    <span style={{ fontSize: '15px', fontWeight: '700', color: o.color }}>{o.value}</span>
+                  <div key={o.label} style={{ borderRadius: '10px', padding: '12px 16px', border: '1px solid #dbeafe', background: '#EEF4FF' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '500' }}>{o.label}</span>
+                      <span style={{ fontSize: '15px', fontWeight: '700', color: '#1B3A6B' }}>{fmt(o.oferta)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #dbeafe', paddingTop: '8px' }}>
+                      <span style={{ fontSize: '11px', color: '#6b7280' }}>Ganancia Maqueda</span>
+                      <span style={{ fontSize: '13px', fontWeight: '700', color: resultados.utilidad_bruta - o.oferta >= 0 ? '#16a34a' : '#dc2626' }}>
+                        {fmt(resultados.utilidad_bruta - o.oferta)}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
