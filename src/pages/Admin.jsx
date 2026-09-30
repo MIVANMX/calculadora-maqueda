@@ -76,7 +76,7 @@ const InviteForm = ({ onSuccess }) => {
         setRol('vendedor')
         onSuccess()
       }
-    } catch (err) {
+    } catch {
       setError('Error al enviar la invitación')
     }
     setLoading(false)
@@ -144,9 +144,6 @@ const Admin = () => {
   const [pagina, setPagina] = useState(1)
   const POR_PAGINA = 10
 
-  useEffect(() => { fetchData() }, [])
-  useEffect(() => { setPagina(1) }, [busqueda, vista])
-
   const fetchPreguntas = async () => {
     const { data } = await supabase
       .from('questions')
@@ -166,6 +163,9 @@ const Admin = () => {
     await fetchPreguntas()
     setLoading(false)
   }
+
+  useEffect(() => { fetchData() }, [])
+  useEffect(() => { setPagina(1) }, [busqueda, vista])
 
   const eliminarCotizacion = async (id, e) => {
     e.stopPropagation()

@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Navbar from '../components/Navbar'
+import HojaCostos from '../components/HojaCostos'
+import { PRESUPUESTO_MARKER } from '../lib/hojaCostos'
 
 const parseNum = (val) => parseFloat(String(val).replace(/,/g, '')) || 0
-const fmt = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n)
 
 const calcular = (form) => {
   const precio = parseNum(form.precio_venta)
@@ -23,10 +24,28 @@ const calcular = (form) => {
   return { total_adeudos, total_costos_operativos, costo_total, utilidad_bruta, viable, oferta_a, oferta_b, oferta_c }
 }
 
-const inputStyle = { width: '100%', padding: '11px 14px', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '14px', color: '#0D1B2A', background: '#f8fafc', outline: 'none', boxSizing: 'border-box', fontFamily: 'Inter, system-ui, sans-serif' }
-const labelStyle = { display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '6px', letterSpacing: '0.3px', textTransform: 'uppercase' }
-const cardStyle = { background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px', padding: '28px', marginBottom: '16px' }
-const sectionTitle = { fontSize: '14px', fontWeight: '700', color: '#0D1B2A', margin: '0 0 20px', paddingBottom: '14px', borderBottom: '2px solid #f3f4f6', letterSpacing: '-0.2px' }
+const inputStyle = {
+  width: '100%',
+  padding: '7px 10px',
+  border: '1px solid #e2e8f0',
+  borderRadius: '6px',
+  fontSize: '13px',
+  color: '#0D1B2A',
+  background: '#ffffff',
+  outline: 'none',
+  boxSizing: 'border-box',
+  fontFamily: 'Inter, system-ui, sans-serif',
+}
+
+const labelStyle = {
+  display: 'block',
+  fontSize: '11px',
+  fontWeight: '600',
+  color: '#475569',
+  marginBottom: '4px',
+  letterSpacing: '0.4px',
+  textTransform: 'uppercase',
+}
 
 const EditarCotizacion = () => {
   const { id } = useParams()
@@ -36,6 +55,26 @@ const EditarCotizacion = () => {
   const [form, setForm] = useState(null)
   const [preguntas, setPreguntas] = useState([])
   const [respuestas, setRespuestas] = useState({})
+  const [detalle, setDetalle] = useState({})
+
+  const fetchCotizacion = async () => {
+    const { data, error } = await supabase.from('quotations').select('*').eq('id', id).single()
+    if (!error) {
+      setForm({
+        ...data,
+        porcentaje_oferta_b: data.porcentaje_oferta_b ?? 60,
+        porcentaje_oferta_c: data.porcentaje_oferta_c ?? 75,
+      })
+      const marker = (data.respuestas || []).find(r => r.pregunta_id === PRESUPUESTO_MARKER)
+      if (marker) {
+        try { setDetalle(JSON.parse(marker.respuesta) || {}) } catch { setDetalle({}) }
+      }
+      const map = {}
+      ;(data.respuestas || []).forEach(r => { if (r.pregunta_id !== PRESUPUESTO_MARKER) map[r.pregunta_id] = r.respuesta })
+      setRespuestas(map)
+    }
+    setLoading(false)
+  }
 
   useEffect(() => { fetchCotizacion() }, [id])
 
@@ -51,28 +90,18 @@ const EditarCotizacion = () => {
     fetchPreguntas()
   }, [])
 
-  useEffect(() => {
-    if (form?.respuestas) {
-      const map = {}
-      form.respuestas.forEach(r => { map[r.pregunta_id] = r.respuesta })
-      setRespuestas(map)
-    }
-  }, [form?.id])
-
   const handleRespuesta = (id, valor) => {
     setRespuestas({ ...respuestas, [id]: valor })
   }
 
-  const fetchCotizacion = async () => {
-    const { data, error } = await supabase.from('quotations').select('*').eq('id', id).single()
-    if (!error) {
-      setForm({
-        ...data,
-        porcentaje_oferta_b: data.porcentaje_oferta_b ?? 60,
-        porcentaje_oferta_c: data.porcentaje_oferta_c ?? 75,
-      })
+  const handleCambioItem = (item, campo, valor) => {
+    if (item.campo && campo === 'estimado') {
+      setForm(f => ({ ...f, [item.campo]: valor }))
     }
-    setLoading(false)
+    setDetalle(d => ({
+      ...d,
+      [item.id]: { ...(d[item.id] || {}), [campo]: valor },
+    }))
   }
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
@@ -104,12 +133,15 @@ const EditarCotizacion = () => {
       porcentaje_oferta_c: parseNum(form.porcentaje_oferta_c),
       incremento_oferta_b: 0,
       incremento_oferta_c: 0,
-      notes: form.notes,
-      respuestas: preguntas.map(p => ({
-        pregunta_id: p.id,
-        pregunta: p.pregunta,
-        respuesta: respuestas[p.id] || '',
-      })),
+      notas: form.notas,
+      respuestas: [
+        ...preguntas.map(p => ({
+          pregunta_id: p.id,
+          pregunta: p.pregunta,
+          respuesta: respuestas[p.id] || '',
+        })),
+        { pregunta_id: PRESUPUESTO_MARKER, pregunta: 'Hoja de costos', respuesta: JSON.stringify(detalle) },
+      ],
       ...resultados,
     }).eq('id', id)
     setSaving(false)
@@ -131,6 +163,18 @@ const EditarCotizacion = () => {
   )
 
   const resultados = calcular(form)
+  const resumen = {
+    totalAdeudos: resultados.total_adeudos,
+    costosOperativos: resultados.total_costos_operativos,
+    costoTotal: resultados.costo_total,
+    utilidad: resultados.utilidad_bruta,
+    viable: resultados.viable,
+    ofertas: [
+      { label: `Oferta A (${form.porcentaje_oferta_a}%)`, monto: resultados.oferta_a, ganancia: resultados.utilidad_bruta - resultados.oferta_a },
+      { label: `Oferta B (${form.porcentaje_oferta_b}%)`, monto: resultados.oferta_b, ganancia: resultados.utilidad_bruta - resultados.oferta_b },
+      { label: `Oferta C (${form.porcentaje_oferta_c}%)`, monto: resultados.oferta_c, ganancia: resultados.utilidad_bruta - resultados.oferta_c },
+    ],
+  }
   const coords = getMapCoords(form.link_maps)
 
   return (
@@ -138,234 +182,129 @@ const EditarCotizacion = () => {
       <Navbar />
 
       {/* Hero */}
-      <div style={{ background: '#0D1B2A', padding: '40px 0' }}>
+      <div style={{ background: '#0D1B2A', padding: '32px 0' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 32px' }}>
           <button onClick={() => navigate(`/cotizacion/${id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b87a8', fontSize: '13px', padding: '0 0 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
             ← Volver al detalle
           </button>
-          <p style={{ fontSize: '12px', color: '#6b87a8', margin: '0 0 8px', letterSpacing: '0.8px', textTransform: 'uppercase', fontWeight: '500' }}>Edición</p>
-          <h1 style={{ fontSize: '26px', fontWeight: '700', color: '#ffffff', margin: '0 0 6px', letterSpacing: '-0.5px' }}>Editar Cotización</h1>
+          <p style={{ fontSize: '12px', color: '#6b87a8', margin: '0 0 6px', letterSpacing: '0.8px', textTransform: 'uppercase', fontWeight: '500' }}>Edición</p>
+          <h1 style={{ fontSize: '26px', fontWeight: '700', color: '#ffffff', margin: '0 0 4px', letterSpacing: '-0.5px' }}>Editar Cotización</h1>
           <p style={{ fontSize: '14px', color: '#6b87a8', margin: 0 }}>{form.nombre_propietario || 'Sin nombre'} — {form.direccion || 'Sin dirección'}</p>
         </div>
       </div>
 
       {/* Contenido */}
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 32px 40px' }}>
 
-          <div>
-            {/* Datos propiedad */}
-            <div style={cardStyle}>
-              <p style={sectionTitle}>Datos de la propiedad</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={labelStyle}>Nombre del propietario</label>
-                  <input name="nombre_propietario" value={form.nombre_propietario || ''} onChange={handleChange} style={inputStyle}
-                    onFocus={e => e.target.style.borderColor = '#2E6BE6'} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
-                </div>
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={labelStyle}>Dirección</label>
-                  <input name="direccion" value={form.direccion || ''} onChange={handleChange} style={inputStyle}
-                    onFocus={e => e.target.style.borderColor = '#2E6BE6'} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
-                </div>
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={labelStyle}>Link Google Maps</label>
-                  <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 6px' }}>Copia el link desde la barra del navegador (no uses el botón compartir)</p>
-                  <input name="link_maps" value={form.link_maps || ''} onChange={handleChange} style={inputStyle} placeholder="https://www.google.com/maps/place/..."
-                    onFocus={e => e.target.style.borderColor = '#2E6BE6'} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
-                  {coords && (
-                    <div style={{ marginTop: '12px', borderRadius: '10px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
-                      <iframe width="100%" height="180" style={{ border: 0, display: 'block' }} loading="lazy"
-                        src={`https://maps.google.com/maps?q=${coords.lat},${coords.lng}&z=17&output=embed`} />
-                      <div style={{ padding: '8px 12px', background: '#f8fafc' }}>
-                        <a href={form.link_maps} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: '#2E6BE6', textDecoration: 'none', fontWeight: '500' }}>
-                          📍 Abrir en Google Maps
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <label style={labelStyle}>Tipo de inmueble</label>
-                  <select name="tipo_inmueble" value={form.tipo_inmueble || 'Casa'} onChange={handleChange} style={inputStyle}>
-                    <option>Casa</option>
-                    <option>Dúplex</option>
-                    <option>Departamento</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={labelStyle}>Precio de venta</label>
-                  <input name="precio_venta" type="text" value={form.precio_venta || ''} onChange={handleChange} style={inputStyle}
-                    onFocus={e => e.target.style.borderColor = '#2E6BE6'} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
-                </div>
-              </div>
+        {/* Datos de la propiedad — grid compacto */}
+        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '18px 20px', marginBottom: '16px' }}>
+          <div className="prop-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px 16px' }}>
+            <div className="prop-item">
+              <label style={labelStyle}>Nombre del propietario</label>
+              <input name="nombre_propietario" value={form.nombre_propietario || ''} onChange={handleChange} style={inputStyle} />
             </div>
-
-            {/* Adeudos */}
-            <div style={cardStyle}>
-              <p style={sectionTitle}>Adeudos</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                {[
-                  { name: 'adeudo_luz', label: 'Adeudo LUZ' },
-                  { name: 'adeudo_agua', label: 'Adeudo AGUA' },
-                  { name: 'adeudo_predial', label: 'Adeudo PREDIAL' },
-                  { name: 'adeudo_infonavit', label: 'Adeudo INFONAVIT' },
-                ].map(({ name, label }) => (
-                  <div key={name}>
-                    <label style={labelStyle}>{label}</label>
-                    <input name={name} type="text" value={form[name] || ''} onChange={handleChange} style={inputStyle}
-                      onFocus={e => e.target.style.borderColor = '#2E6BE6'} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
-                  </div>
-                ))}
-              </div>
+            <div className="prop-item">
+              <label style={labelStyle}>Dirección</label>
+              <input name="direccion" value={form.direccion || ''} onChange={handleChange} style={inputStyle} />
             </div>
-
-            {/* Costos operativos */}
-            <div style={cardStyle}>
-              <p style={sectionTitle}>Costos operativos</p>
-              <p style={{ fontSize: '12px', color: '#9ca3af', margin: '0 0 16px' }}>
-                Ingresa el total de todos los costos operativos del proyecto.
-              </p>
-              <div>
-                <label style={labelStyle}>Total costos operativos</label>
-                <input name="costos_operativos" type="text" value={form.costos_operativos || ''} onChange={handleChange} style={inputStyle}
-                  onFocus={e => e.target.style.borderColor = '#2E6BE6'} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
-              </div>
+            <div className="prop-item">
+              <label style={labelStyle}>Tipo de inmueble</label>
+              <select name="tipo_inmueble" value={form.tipo_inmueble || 'Casa'} onChange={handleChange} style={inputStyle}>
+                <option>Casa</option>
+                <option>Dúplex</option>
+                <option>Departamento</option>
+              </select>
             </div>
-
-            {/* Parámetros oferta */}
-            <div style={cardStyle}>
-              <p style={sectionTitle}>Parámetros de oferta</p>
-              <p style={{ fontSize: '12px', color: '#9ca3af', margin: '0 0 16px' }}>
-                Porcentaje de la utilidad bruta para cada nivel de oferta.
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-                <div>
-                  <label style={labelStyle}>% Oferta A</label>
-                  <input name="porcentaje_oferta_a" type="text" value={form.porcentaje_oferta_a || ''} onChange={handleChange} style={inputStyle}
-                    onFocus={e => e.target.style.borderColor = '#2E6BE6'} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
-                </div>
-                <div>
-                  <label style={labelStyle}>% Oferta B</label>
-                  <input name="porcentaje_oferta_b" type="text" value={form.porcentaje_oferta_b || ''} onChange={handleChange} style={inputStyle}
-                    onFocus={e => e.target.style.borderColor = '#2E6BE6'} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
-                </div>
-                <div>
-                  <label style={labelStyle}>% Oferta C</label>
-                  <input name="porcentaje_oferta_c" type="text" value={form.porcentaje_oferta_c || ''} onChange={handleChange} style={inputStyle}
-                    onFocus={e => e.target.style.borderColor = '#2E6BE6'} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
-                </div>
-              </div>
+            <div className="prop-item">
+              <label style={labelStyle}>Precio de venta</label>
+              <input name="precio_venta" type="text" value={form.precio_venta || ''} onChange={handleChange} style={inputStyle} />
             </div>
-
-            {/* Preguntas */}
-            {preguntas.length > 0 && (
-              <div style={cardStyle}>
-                <p style={sectionTitle}>Preguntas de evaluación</p>
-                <p style={{ fontSize: '12px', color: '#9ca3af', margin: '0 0 20px' }}>
-                  Actualiza las respuestas si es necesario.
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  {preguntas.map((p, index) => (
-                    <div key={p.id}>
-                      <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ background: '#f0f4ff', color: '#1B3A6B', fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '6px' }}>{index + 1}</span>
-                        {p.pregunta}
-                      </label>
-                      <input
-                        type="text"
-                        value={respuestas[p.id] || ''}
-                        onChange={e => handleRespuesta(p.id, e.target.value)}
-                        style={inputStyle}
-                        placeholder="Escribe tu respuesta..."
-                        onFocus={e => e.target.style.borderColor = '#2E6BE6'}
-                        onBlur={e => e.target.style.borderColor = '#e5e7eb'}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Notas */}
-            <div style={cardStyle}>
-              <p style={sectionTitle}>Notas</p>
-              <textarea name="notas" value={form.notas || ''} onChange={handleChange}
-                style={{ ...inputStyle, resize: 'none', height: '90px' }}
-                onFocus={e => e.target.style.borderColor = '#2E6BE6'} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
+            <div className="prop-item span-2" style={{ gridColumn: 'span 2' }}>
+              <label style={labelStyle}>Link Google Maps</label>
+              <input name="link_maps" value={form.link_maps || ''} onChange={handleChange} style={inputStyle} placeholder="https://www.google.com/maps/place/..." />
             </div>
           </div>
 
-          {/* Panel resultados */}
-          <div style={{ position: 'sticky', top: '80px' }}>
-            <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', border: '1px solid #e5e7eb' }}>
-              <p style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', margin: '0 0 20px', letterSpacing: '0.8px', textTransform: 'uppercase' }}>Resultados en vivo</p>
-
-              <div style={{ marginBottom: '16px' }}>
-                {[
-                  { label: 'Total adeudos', value: fmt(resultados.total_adeudos), color: '#dc2626' },
-                  { label: 'Costos operativos', value: fmt(resultados.total_costos_operativos), color: '#dc2626' },
-                ].map(r => (
-                  <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '13px', color: '#6b7280' }}>{r.label}</span>
-                    <span style={{ fontSize: '13px', fontWeight: '600', color: r.color }}>{r.value}</span>
-                  </div>
-                ))}
+          {coords && (
+            <div style={{ marginTop: '12px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+              <iframe width="100%" height="160" style={{ border: 0, display: 'block' }} loading="lazy"
+                src={`https://maps.google.com/maps?q=${coords.lat},${coords.lng}&z=17&output=embed`} />
+              <div style={{ padding: '6px 12px', background: '#f8fafc' }}>
+                <a href={form.link_maps} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: '#2E6BE6', textDecoration: 'none', fontWeight: '500' }}>
+                  📍 Abrir en Google Maps
+                </a>
               </div>
-
-              <div style={{ borderTop: '1px solid #f3f4f6', borderBottom: '1px solid #f3f4f6', padding: '16px 0', marginBottom: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: '500', color: '#374151' }}>Costo total</span>
-                  <span style={{ fontSize: '15px', fontWeight: '700', color: '#dc2626' }}>{fmt(resultados.costo_total)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '13px', fontWeight: '500', color: '#374151' }}>Utilidad bruta</span>
-                  <span style={{ fontSize: '15px', fontWeight: '700', color: resultados.utilidad_bruta >= 0 ? '#16a34a' : '#dc2626' }}>{fmt(resultados.utilidad_bruta)}</span>
-                </div>
-              </div>
-
-              <div style={{ borderRadius: '10px', padding: '12px 16px', textAlign: 'center', marginBottom: '20px', background: resultados.viable ? '#f0fdf4' : '#fef2f2', border: resultados.viable ? '1px solid #bbf7d0' : '1px solid #fecaca' }}>
-                <span style={{ fontSize: '13px', fontWeight: '700', color: resultados.viable ? '#16a34a' : '#dc2626' }}>
-                  {resultados.viable ? '✓ VIABLE' : '✗ NO VIABLE'}
-                </span>
-              </div>
-
-              <p style={{ fontSize: '11px', color: '#9ca3af', margin: '0 0 10px', fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Niveles de oferta</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-                {[
-                  { label: `Oferta A (${form.porcentaje_oferta_a}%)`, oferta: resultados.oferta_a },
-                  { label: `Oferta B (${form.porcentaje_oferta_b}%)`, oferta: resultados.oferta_b },
-                  { label: `Oferta C (${form.porcentaje_oferta_c}%)`, oferta: resultados.oferta_c },
-                ].map(o => (
-                  <div key={o.label} style={{ borderRadius: '10px', padding: '12px 16px', border: '1px solid #dbeafe', background: '#EEF4FF' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '500' }}>{o.label}</span>
-                      <span style={{ fontSize: '15px', fontWeight: '700', color: '#1B3A6B' }}>{fmt(o.oferta)}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #dbeafe', paddingTop: '8px' }}>
-                      <span style={{ fontSize: '11px', color: '#6b7280' }}>Ganancia Maqueda</span>
-                      <span style={{ fontSize: '13px', fontWeight: '700', color: resultados.utilidad_bruta - o.oferta >= 0 ? '#16a34a' : '#dc2626' }}>
-                        {fmt(resultados.utilidad_bruta - o.oferta)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                onClick={handleGuardar}
-                disabled={saving}
-                style={{ width: '100%', background: saving ? '#93afd4' : '#1B3A6B', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '13px', fontSize: '14px', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer', transition: 'background 0.2s' }}
-                onMouseEnter={e => { if (!saving) e.currentTarget.style.background = '#0D1B2A' }}
-                onMouseLeave={e => { if (!saving) e.currentTarget.style.background = '#1B3A6B' }}
-              >
-                {saving ? 'Guardando...' : 'Guardar cambios'}
-              </button>
             </div>
-          </div>
+          )}
 
+          {/* Parámetros de oferta */}
+          <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-end', marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #f1f5f9', flexWrap: 'wrap' }}>
+            {[
+              { name: 'porcentaje_oferta_a', label: '% Oferta A' },
+              { name: 'porcentaje_oferta_b', label: '% Oferta B' },
+              { name: 'porcentaje_oferta_c', label: '% Oferta C' },
+            ].map(({ name, label }) => (
+              <div key={name}>
+                <label style={labelStyle}>{label}</label>
+                <input name={name} type="text" value={form[name] || ''} onChange={handleChange} style={{ ...inputStyle, width: '86px' }} />
+              </div>
+            ))}
+          </div>
         </div>
+
+        {/* Hoja de costos */}
+        <HojaCostos form={form} detalle={detalle} onCambio={handleCambioItem} resumen={resumen} />
+
+        {/* Preguntas */}
+        {preguntas.length > 0 && (
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px 20px', marginTop: '16px' }}>
+            <p style={{ fontSize: '12px', fontWeight: '700', color: '#0D1B2A', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 12px' }}>Preguntas de evaluación</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {preguntas.map((p, index) => (
+                <div key={p.id}>
+                  <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ background: '#f0f4ff', color: '#1B3A6B', fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '6px' }}>{index + 1}</span>
+                    {p.pregunta}
+                  </label>
+                  <input
+                    type="text"
+                    value={respuestas[p.id] || ''}
+                    onChange={e => handleRespuesta(p.id, e.target.value)}
+                    style={inputStyle}
+                    placeholder="Escribe tu respuesta..."
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Notas */}
+        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px 20px', marginTop: '16px' }}>
+          <p style={{ fontSize: '12px', fontWeight: '700', color: '#0D1B2A', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 12px' }}>Notas</p>
+          <textarea name="notas" value={form.notas || ''} onChange={handleChange}
+            style={{ ...inputStyle, resize: 'none', height: '60px' }}
+            placeholder="Observaciones, seguimiento, detalles importantes..." />
+        </div>
+
+        {/* Botón */}
+        <button
+          onClick={handleGuardar}
+          disabled={saving}
+          style={{ width: '100%', background: saving ? '#93afd4' : '#1B3A6B', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '13px', fontSize: '14px', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer', transition: 'background 0.2s', marginTop: '20px' }}
+          onMouseEnter={e => { if (!saving) e.currentTarget.style.background = '#0D1B2A' }}
+          onMouseLeave={e => { if (!saving) e.currentTarget.style.background = '#1B3A6B' }}
+        >
+          {saving ? 'Guardando...' : 'Guardar cambios'}
+        </button>
       </div>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .prop-grid { grid-template-columns: 1fr !important; }
+          .prop-item.span-2 { grid-column: span 1 !important; }
+        }
+      `}</style>
     </div>
   )
 }

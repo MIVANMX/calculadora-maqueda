@@ -15,9 +15,6 @@ const Historial = () => {
   const [busqueda, setBusqueda] = useState('')
   const [pagina, setPagina] = useState(1)
 
-  useEffect(() => { fetchCotizaciones() }, [])
-  useEffect(() => { setPagina(1) }, [filtro, busqueda])
-
   const fetchCotizaciones = async () => {
     setLoading(true)
     const { data, error } = await supabase
@@ -27,6 +24,9 @@ const Historial = () => {
     if (!error) setCotizaciones(data)
     setLoading(false)
   }
+
+  useEffect(() => { fetchCotizaciones() }, [])
+  useEffect(() => { setPagina(1) }, [filtro, busqueda])
 
   const viables = cotizaciones.filter(c => c.viable).length
   const noViables = cotizaciones.filter(c => !c.viable).length

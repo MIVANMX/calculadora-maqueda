@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import Navbar from '../components/Navbar'
+import Modal from '../components/Modal'
+import HojaCostos from '../components/HojaCostos'
+import { PRESUPUESTO_MARKER } from '../lib/hojaCostos'
 
 const fmt = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n)
 
@@ -13,8 +16,7 @@ const DetalleCotizacion = () => {
   const [cotizacion, setCotizacion] = useState(null)
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
-
-  useEffect(() => { fetchCotizacion() }, [id])
+  const [modal, setModal] = useState(null)
 
   const fetchCotizacion = async () => {
     const { data, error } = await supabase
@@ -26,12 +28,20 @@ const DetalleCotizacion = () => {
     setLoading(false)
   }
 
-  const handleEliminar = async () => {
-    if (!confirm('¿Eliminar esta cotización? Esta acción no se puede deshacer.')) return
-    setDeleting(true)
-    const { error } = await supabase.from('quotations').delete().eq('id', id)
-    if (!error) navigate('/historial')
-    else alert('Error al eliminar: ' + error.message)
+  useEffect(() => { fetchCotizacion() }, [id])
+
+  const handleEliminar = () => {
+    setModal({
+      title: 'Eliminar cotización',
+      message: '¿Eliminar esta cotización? Esta acción no se puede deshacer.',
+      onConfirm: async () => {
+        setModal(null)
+        setDeleting(true)
+        const { error } = await supabase.from('quotations').delete().eq('id', id)
+        if (!error) navigate('/historial')
+        else { alert('Error al eliminar: ' + error.message); setDeleting(false) }
+      },
+    })
   }
 
   const getMapCoords = (url) => {
@@ -55,6 +65,19 @@ const DetalleCotizacion = () => {
   )
 
   const coords = getMapCoords(cotizacion.link_maps)
+  const tieneHoja = (cotizacion.respuestas || []).some(r => r.pregunta_id === PRESUPUESTO_MARKER)
+  const resumenDetalle = {
+    totalAdeudos: cotizacion.total_adeudos,
+    costosOperativos: cotizacion.total_costos_operativos,
+    costoTotal: cotizacion.costo_total,
+    utilidad: cotizacion.utilidad_bruta,
+    viable: cotizacion.viable,
+    ofertas: [
+      { label: `Oferta A (${cotizacion.porcentaje_oferta_a}%)`, monto: cotizacion.oferta_a, ganancia: cotizacion.utilidad_bruta - cotizacion.oferta_a },
+      { label: `Oferta B (${cotizacion.porcentaje_oferta_b ?? 60}%)`, monto: cotizacion.oferta_b, ganancia: cotizacion.utilidad_bruta - cotizacion.oferta_b },
+      { label: `Oferta C (${cotizacion.porcentaje_oferta_c ?? 75}%)`, monto: cotizacion.oferta_c, ganancia: cotizacion.utilidad_bruta - cotizacion.oferta_c },
+    ],
+  }
   const cardStyle = { background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px', padding: '24px', marginBottom: '16px' }
   const sectionTitle = { fontSize: '13px', fontWeight: '700', color: '#0D1B2A', margin: '0 0 16px', paddingBottom: '12px', borderBottom: '2px solid #f3f4f6', letterSpacing: '0.3px', textTransform: 'uppercase' }
   const rowStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f9fafb' }
@@ -62,6 +85,7 @@ const DetalleCotizacion = () => {
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <Navbar />
+      {modal && <Modal title={modal.title} message={modal.message} onConfirm={modal.onConfirm} onCancel={() => setModal(null)} danger confirmText="Eliminar" />}
 
       {/* Hero */}
       <div style={{ background: '#0D1B2A', padding: '40px 0' }}>
@@ -160,11 +184,11 @@ const DetalleCotizacion = () => {
             </div>
 
             {/* Preguntas y respuestas */}
-            {cotizacion.respuestas && cotizacion.respuestas.length > 0 && (
+            {cotizacion.respuestas && cotizacion.respuestas.filter(r => r.pregunta_id !== PRESUPUESTO_MARKER).length > 0 && (
               <div style={cardStyle}>
                 <p style={sectionTitle}>Preguntas de evaluación</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {cotizacion.respuestas.map((r, index) => (
+                  {cotizacion.respuestas.filter(r => r.pregunta_id !== PRESUPUESTO_MARKER).map((r, index) => (
                     <div key={index} style={{ padding: '14px 16px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e5e7eb' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                         <span style={{ background: '#f0f4ff', color: '#1B3A6B', fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '6px' }}>{index + 1}</span>
@@ -180,7 +204,7 @@ const DetalleCotizacion = () => {
             )}
 
             {/* Notas */}
-            {cotizacion.notes && (
+            {cotizacion.notas && (
               <div style={cardStyle}>
                 <p style={sectionTitle}>Notas</p>
                 <p style={{ fontSize: '14px', color: '#374151', margin: 0, lineHeight: '1.6' }}>{cotizacion.notas}</p>
@@ -251,6 +275,24 @@ const DetalleCotizacion = () => {
           </div>
 
         </div>
+
+        {/* Hoja de costos guardada */}
+        {tieneHoja && (() => {
+          const detalleGuardado = (() => {
+            try {
+              const raw = (cotizacion.respuestas || []).find(r => r.pregunta_id === PRESUPUESTO_MARKER)?.respuesta
+              return raw ? (JSON.parse(raw) || {}) : {}
+            } catch {
+              return {}
+            }
+          })()
+          return (
+            <div style={{ marginTop: '20px' }}>
+              <p style={{ fontSize: '12px', fontWeight: '700', color: '#0D1B2A', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>Hoja de costos</p>
+              <HojaCostos cotizacion={cotizacion} detalle={detalleGuardado} resumen={resumenDetalle} readOnly />
+            </div>
+          )
+        })()}
       </div>
 
       <style>{`

@@ -1,12 +1,15 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
 
 const Login = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [resetMsg, setResetMsg] = useState('')
+  const [resetError, setResetError] = useState('')
   const { login } = useAuth()
   const navigate = useNavigate()
 
@@ -21,6 +24,17 @@ const Login = () => {
     } else {
       navigate('/dashboard')
     }
+  }
+
+  const handleReset = async () => {
+    if (!email) { setResetError('Escribe primero tu correo'); return }
+    setResetError('')
+    setResetMsg('')
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/set-password`,
+    })
+    if (error) setResetError('No se pudo enviar el correo de recuperación')
+    else setResetMsg('Revisa tu correo: te enviamos un enlace para restablecer tu contraseña.')
   }
 
   return (
@@ -115,6 +129,23 @@ const Login = () => {
             {error && (
               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '12px 14px', marginBottom: '20px' }}>
                 <p style={{ fontSize: '13px', color: '#dc2626', margin: 0 }}>⚠️ {error}</p>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '-14px 0 18px' }}>
+              <button type="button" onClick={handleReset} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12.5px', color: '#2E6BE6', fontWeight: '500', padding: 0 }}>
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
+
+            {resetMsg && (
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '12px 14px', marginBottom: '20px' }}>
+                <p style={{ fontSize: '13px', color: '#16a34a', margin: 0 }}>✓ {resetMsg}</p>
+              </div>
+            )}
+            {resetError && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '12px 14px', marginBottom: '20px' }}>
+                <p style={{ fontSize: '13px', color: '#dc2626', margin: 0 }}>⚠️ {resetError}</p>
               </div>
             )}
 
